@@ -1,5 +1,5 @@
 """
-Configuración del sistema de radio streaming para SA-MP
+Configuración del sistema de radio streaming Starlight
 """
 
 import os

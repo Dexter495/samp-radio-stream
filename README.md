@@ -1,4 +1,4 @@
-# 🎵 SA-MP Radio Streaming System
+# 🌟 Starlight Radio Streaming System
 
 Sistema completo de radio streaming donde cada jugador de SA-MP puede subir y reproducir su propia música.
 
