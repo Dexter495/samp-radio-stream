@@ -114,8 +114,23 @@ liquidsoap liquidsoap/radio.liq &
 
 #### Iniciar Flask:
 
+**Para desarrollo (con debug):**
+
+```bash
+FLASK_DEBUG=1 python3 app.py
+```
+
+**Para producción:**
+
 ```bash
 python3 app.py
+```
+
+O usar un servidor WSGI de producción como Gunicorn:
+
+```bash
+pip install gunicorn
+gunicorn -w 4 -b 0.0.0.0:5000 app:app
 ```
 
 ## 📝 Uso
