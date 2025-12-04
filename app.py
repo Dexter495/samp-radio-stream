@@ -12,9 +12,6 @@ app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = config.UPLOAD_FOLDER
 app.config['MAX_CONTENT_LENGTH'] = config.MAX_FILE_SIZE
 
-# Diccionario para rastrear estados de reproducción de usuarios
-user_states = {}
-
 
 def allowed_file(filename):
     """Verifica si la extensión del archivo es permitida"""
@@ -93,8 +90,9 @@ def user_page(usuario):
                        if os.path.isdir(os.path.join(config.UPLOAD_FOLDER, f))])
     
     if active_users >= config.MAX_USERS:
-        user_folder = get_user_folder(usuario)
-        if not os.path.exists(user_folder) or not os.listdir(user_folder):
+        # Verificar si el usuario ya existe antes de llamar a get_user_folder
+        user_folder_path = os.path.join(config.UPLOAD_FOLDER, secure_filename(usuario))
+        if not os.path.exists(user_folder_path) or not os.listdir(user_folder_path):
             return f"Límite de usuarios alcanzado ({config.MAX_USERS} máximo)", 429
     
     return render_template('index.html', usuario=usuario)
@@ -158,6 +156,8 @@ def list_songs(usuario):
 @app.route('/api/<usuario>/cancion/<nombre>', methods=['DELETE'])
 def delete_song(usuario, nombre):
     """Eliminar canción"""
+    # Guardar el nombre original para comparación con el estado
+    original_nombre = nombre
     filename = secure_filename(nombre)
     user_folder = get_user_folder(usuario)
     filepath = os.path.join(user_folder, filename)
@@ -177,7 +177,8 @@ def delete_song(usuario, nombre):
         
         # Si era la canción actual, detener reproducción
         state = load_user_state(usuario)
-        if state.get('current_song') == nombre:
+        # Comparar con el nombre original antes de secure_filename
+        if state.get('current_song') == original_nombre:
             state['playing'] = False
             state['current_song'] = None
             state['paused'] = False
