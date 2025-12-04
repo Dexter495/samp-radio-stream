@@ -125,7 +125,7 @@ function displaySongs(canciones) {
 
         const songName = document.createElement('div');
         songName.className = 'song-name';
-        songName.textContent = cancion.nombre;
+        songName.innerHTML = '<i class="fas fa-music"></i> ' + cancion.nombre;
 
         const songSize = document.createElement('div');
         songSize.className = 'song-size';
@@ -139,12 +139,12 @@ function displaySongs(canciones) {
 
         const playBtn = document.createElement('button');
         playBtn.className = 'btn btn-success btn-small';
-        playBtn.textContent = '▶️ Reproducir';
+        playBtn.innerHTML = '<i class="fas fa-play"></i> Reproducir';
         playBtn.onclick = () => playSong(cancion.nombre);
 
         const deleteBtn = document.createElement('button');
         deleteBtn.className = 'btn btn-danger btn-small';
-        deleteBtn.textContent = '🗑️ Eliminar';
+        deleteBtn.innerHTML = '<i class="fas fa-trash-alt"></i> Eliminar';
         deleteBtn.onclick = () => deleteSong(cancion.nombre);
 
         songActions.appendChild(playBtn);
@@ -287,10 +287,13 @@ async function deleteSong(nombre) {
 // Actualizar estado del reproductor
 function updatePlayerState() {
     if (currentState.playing) {
+        const statusIcon = currentState.paused ? '<i class="fas fa-pause"></i>' : '<i class="fas fa-play"></i>';
+        const statusText = currentState.paused ? 'Pausado' : 'Reproduciendo';
+        
         currentSongDiv.innerHTML = `
-            <p>🎵 <strong>${currentState.current_song}</strong></p>
-            <p style="font-size: 0.9em; color: #666;">
-                Estado: ${currentState.paused ? '⏸️ Pausado' : '▶️ Reproduciendo'}
+            <p><i class="fas fa-music"></i> <strong>${currentState.current_song}</strong></p>
+            <p style="font-size: 0.9em; color: #B3B3B3;">
+                Estado: ${statusIcon} ${statusText}
             </p>
         `;
         currentSongDiv.className = 'current-song ' + (currentState.paused ? 'paused' : 'playing');
