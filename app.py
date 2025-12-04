@@ -13,6 +13,8 @@ import database
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = config.UPLOAD_FOLDER
 app.config['MAX_CONTENT_LENGTH'] = config.MAX_FILE_SIZE
+# IMPORTANTE: En producción, establecer SECRET_KEY como variable de entorno
+# Ejemplo: export SECRET_KEY='tu-clave-secreta-aleatoria-y-segura'
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'starlight-radio-secret-key-change-in-production')
 
 

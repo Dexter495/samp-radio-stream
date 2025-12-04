@@ -4,9 +4,9 @@ Maneja usuarios, autenticación y permisos de administrador
 """
 
 import sqlite3
-import hashlib
 import os
 from datetime import datetime
+from werkzeug.security import generate_password_hash, check_password_hash
 
 # Ruta de la base de datos
 DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'starlight.db')
@@ -38,17 +38,18 @@ def init_db():
     conn.commit()
     
     # Crear usuario admin por defecto si no existe
+    # NOTA: En producción, cambiar la contraseña por defecto
     try:
         create_user('Dylan_Charris', '123456789', is_admin=True)
-    except:
+    except sqlite3.IntegrityError:
         pass  # El usuario ya existe
     
     conn.close()
 
 
 def hash_password(password):
-    """Hashear contraseña usando SHA-256"""
-    return hashlib.sha256(password.encode()).hexdigest()
+    """Hashear contraseña usando Werkzeug (pbkdf2:sha256)"""
+    return generate_password_hash(password)
 
 
 def create_user(username, password, is_admin=False):
@@ -94,16 +95,17 @@ def authenticate_user(username, password):
     conn = get_db_connection()
     cursor = conn.cursor()
     
-    hashed_pw = hash_password(password)
     cursor.execute(
-        'SELECT * FROM users WHERE username = ? AND password = ?',
-        (username, hashed_pw)
+        'SELECT password FROM users WHERE username = ?',
+        (username,)
     )
     
     user = cursor.fetchone()
     conn.close()
     
-    return user is not None
+    if user:
+        return check_password_hash(user['password'], password)
+    return False
 
 
 def get_user(username):
@@ -197,7 +199,7 @@ def delete_user(user_id):
         success = cursor.rowcount > 0
         conn.close()
         return success
-    except:
+    except sqlite3.Error:
         conn.close()
         return False
 
@@ -229,7 +231,7 @@ def toggle_admin(user_id):
         
         conn.close()
         return False
-    except:
+    except sqlite3.Error:
         conn.close()
         return False
 

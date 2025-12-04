@@ -108,7 +108,8 @@
                         
                         <form method="POST" action="{{ url_for('admin_delete_user', user_id=user.id) }}" 
                               style="display: inline;"
-                              onsubmit="return confirm('¿Estás seguro de que deseas eliminar al usuario {{ user.username }}? Esta acción no se puede deshacer.');">
+                              data-username="{{ user.username }}"
+                              class="delete-user-form">
                             <button type="submit" class="btn-admin btn-danger" 
                                     {% if user.username == session.user %}disabled title="No puedes eliminarte a ti mismo"{% endif %}>
                                 <i class="fas fa-trash"></i> Eliminar
@@ -140,5 +141,19 @@ function toggleCreateUserForm() {
         form.style.display = 'none';
     }
 }
+
+// Handle delete confirmation safely
+document.addEventListener('DOMContentLoaded', function() {
+    const deleteForms = document.querySelectorAll('.delete-user-form');
+    deleteForms.forEach(function(form) {
+        form.addEventListener('submit', function(e) {
+            const username = form.getAttribute('data-username');
+            const message = '¿Estás seguro de que deseas eliminar al usuario ' + username + '? Esta acción no se puede deshacer.';
+            if (!confirm(message)) {
+                e.preventDefault();
+            }
+        });
+    });
+});
 </script>
 {% endblock %}
