@@ -1,3 +1,8 @@
+:root {
+    --spotify-green: #1db954;
+    --spotify-green-hover: #1ed760;
+}
+
 * {
     margin: 0;
     padding: 0;
@@ -322,6 +327,30 @@ footer {
     text-align: center;
     padding: 20px;
     font-size: 0.9em;
+}
+
+.tip-box {
+    background: rgba(29, 185, 84, 0.1);
+    border: 1px solid var(--spotify-green);
+    border-radius: 8px;
+    padding: 12px 16px;
+    margin-top: 15px;
+    font-size: 0.9rem;
+}
+
+.tip-box a {
+    color: var(--spotify-green);
+    text-decoration: none;
+    font-weight: 600;
+}
+
+.tip-box a:hover {
+    text-decoration: underline;
+    color: var(--spotify-green-hover);
+}
+
+.tip-box i {
+    color: var(--spotify-green);
 }
 
 /* Scrollbar personalizado */

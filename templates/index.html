@@ -3,13 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SA-MP Radio Stream{% if usuario %} - {{ usuario }}{% endif %}</title>
+    <title>Starlight Radio Stream{% if usuario %} - {{ usuario }}{% endif %}</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
 <body>
     <div class="container">
         <header>
-            <h1>🎵 SA-MP Radio Stream</h1>
+            <h1><i class="fas fa-star"></i> Starlight Radio Stream</h1>
             {% if usuario %}
             <h2>Usuario: <span class="username">{{ usuario }}</span></h2>
             {% endif %}
@@ -39,6 +40,10 @@
                     <input type="file" id="fileInput" accept=".mp3" required>
                     <button type="submit" class="btn btn-primary">Subir MP3</button>
                 </form>
+                <div class="tip-box">
+                    <p><i class="fas fa-lightbulb"></i> <strong>💡 ¿Necesitas convertir una canción a MP3?</strong></p>
+                    <p>Te recomendamos usar <a href="https://y2mate.nu/es-ei28/" target="_blank" rel="noopener">y2mate.nu</a> para convertir tus canciones fácilmente.</p>
+                </div>
                 <div id="uploadStatus" class="status-message"></div>
             </div>
 
@@ -75,7 +80,7 @@
         {% endif %}
 
         <footer>
-            <p>SA-MP Radio Streaming System | Máximo 30 usuarios | Solo MP3</p>
+            <p>Starlight Radio Streaming System | Máximo 30 usuarios | Solo MP3</p>
         </footer>
     </div>
 

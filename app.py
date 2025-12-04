@@ -1,5 +1,5 @@
 """
-Servidor Flask para el sistema de radio streaming SA-MP
+Servidor Flask para el sistema de radio streaming Starlight
 """
 
 from flask import Flask, render_template, request, jsonify, send_from_directory
