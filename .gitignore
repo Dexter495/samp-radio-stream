@@ -6,6 +6,9 @@ uploads/*
 playlists/*
 !playlists/.gitkeep
 
+# Base de datos SQLite
+*.db
+
 # Python
 __pycache__/
 *.py[cod]

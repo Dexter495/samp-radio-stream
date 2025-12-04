@@ -2,15 +2,21 @@
 Servidor Flask para el sistema de radio streaming Starlight
 """
 
-from flask import Flask, render_template, request, jsonify, send_from_directory
+from flask import Flask, render_template, request, jsonify, send_from_directory, session, redirect, url_for, flash
 import os
 import config
 from werkzeug.utils import secure_filename
 import json
+import secrets
+import database
 
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = config.UPLOAD_FOLDER
 app.config['MAX_CONTENT_LENGTH'] = config.MAX_FILE_SIZE
+app.config['SECRET_KEY'] = secrets.token_hex(32)
+
+# Inicializar base de datos al iniciar la aplicación
+database.init_db()
 
 
 def allowed_file(filename):
@@ -73,15 +79,91 @@ def update_playlist(usuario):
     return canciones
 
 
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    """Página y proceso de login"""
+    if request.method == 'POST':
+        username = request.form.get('username', '').strip()
+        password = request.form.get('password', '')
+        
+        if not username or not password:
+            return render_template('login.html', error='Usuario y contraseña son requeridos')
+        
+        if database.verify_user(username, password):
+            session['username'] = username
+            session['logged_in'] = True
+            return redirect(url_for('user_page', usuario=username))
+        else:
+            return render_template('login.html', error='Usuario o contraseña incorrectos')
+    
+    # Si ya está logueado, redirigir a su página
+    if session.get('logged_in'):
+        return redirect(url_for('user_page', usuario=session.get('username')))
+    
+    return render_template('login.html')
+
+
+@app.route('/logout')
+def logout():
+    """Cerrar sesión"""
+    session.clear()
+    return redirect(url_for('login'))
+
+
+@app.route('/register', methods=['GET', 'POST'])
+def register():
+    """Página y proceso de registro"""
+    if request.method == 'POST':
+        username = request.form.get('username', '').strip()
+        password = request.form.get('password', '')
+        confirm_password = request.form.get('confirm_password', '')
+        
+        # Validaciones
+        if not username or not password or not confirm_password:
+            return render_template('register.html', error='Todos los campos son requeridos')
+        
+        if len(username) < 3 or len(username) > 50:
+            return render_template('register.html', error='El usuario debe tener entre 3 y 50 caracteres')
+        
+        if len(password) < 6:
+            return render_template('register.html', error='La contraseña debe tener al menos 6 caracteres')
+        
+        if password != confirm_password:
+            return render_template('register.html', error='Las contraseñas no coinciden')
+        
+        if database.user_exists(username):
+            return render_template('register.html', error='El usuario ya existe')
+        
+        # Crear usuario
+        if database.create_user(username, password):
+            return render_template('register.html', success='Usuario creado exitosamente. Ahora puedes iniciar sesión.')
+        else:
+            return render_template('register.html', error='Error al crear el usuario')
+    
+    return render_template('register.html')
+
+
 @app.route('/')
 def index():
-    """Página de inicio - redirige a página de ayuda"""
-    return render_template('index.html', usuario='')
+    """Página de inicio - redirige a login si no está autenticado"""
+    if not session.get('logged_in'):
+        return redirect(url_for('login'))
+    
+    # Si está logueado, redirigir a su página de usuario
+    return redirect(url_for('user_page', usuario=session.get('username')))
 
 
 @app.route('/<usuario>')
 def user_page(usuario):
-    """Página web del usuario"""
+    """Página web del usuario - requiere autenticación"""
+    # Verificar autenticación
+    if not session.get('logged_in'):
+        return redirect(url_for('login'))
+    
+    # Verificar que el usuario logueado coincida con el usuario solicitado
+    if session.get('username') != usuario:
+        return redirect(url_for('user_page', usuario=session.get('username')))
+    
     if not usuario or len(usuario) > 50:
         return "Usuario inválido", 400
     
