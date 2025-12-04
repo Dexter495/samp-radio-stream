@@ -147,8 +147,10 @@ document.addEventListener('DOMContentLoaded', function() {
     const deleteForms = document.querySelectorAll('.delete-user-form');
     deleteForms.forEach(function(form) {
         form.addEventListener('submit', function(e) {
+            // Get username from data attribute (already escaped by Jinja2)
             const username = form.getAttribute('data-username');
-            const message = '¿Estás seguro de que deseas eliminar al usuario ' + username + '? Esta acción no se puede deshacer.';
+            // Use template literal for safer string construction
+            const message = `¿Estás seguro de que deseas eliminar al usuario ${username}? Esta acción no se puede deshacer.`;
             if (!confirm(message)) {
                 e.preventDefault();
             }

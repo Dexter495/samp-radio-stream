@@ -38,7 +38,9 @@ def init_db():
     conn.commit()
     
     # Crear usuario admin por defecto si no existe
-    # NOTA: En producción, cambiar la contraseña por defecto
+    # ⚠️ IMPORTANTE: En producción, cambiar esta contraseña inmediatamente después
+    # de la primera instalación. Considerar usar variables de entorno para
+    # credenciales del primer admin: os.environ.get('ADMIN_PASSWORD', '123456789')
     try:
         create_user('Dylan_Charris', '123456789', is_admin=True)
     except sqlite3.IntegrityError:
