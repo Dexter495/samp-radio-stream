@@ -628,25 +628,83 @@ footer {
    RESPONSIVE DESIGN (Mobile-First)
    ======================================== */
    
-/* Base styles already mobile-friendly */
+/* Base styles are mobile-friendly (320px+) */
 
 /* Small devices (480px and up) */
 @media (min-width: 480px) {
     body {
         padding: 15px;
     }
-    
-    .btn {
-        min-width: auto;
-    }
 }
 
 /* Medium devices (768px and up) */
-@media (max-width: 768px) {
+@media (min-width: 768px) {
     body {
-        padding: 10px;
+        padding: 20px;
     }
 
+    header h1 {
+        font-size: 2.5em;
+    }
+
+    header h2 {
+        font-size: 1.3em;
+    }
+
+    .player-section {
+        padding: 30px;
+    }
+
+    .upload-section,
+    .player-controls,
+    .playlist-section {
+        padding: 25px;
+    }
+
+    .btn {
+        width: auto;
+    }
+
+    .song-item {
+        flex-direction: row;
+        align-items: center;
+    }
+
+    .song-actions {
+        width: auto;
+        flex-wrap: nowrap;
+    }
+
+    #uploadForm {
+        flex-direction: row;
+    }
+
+    .control-buttons {
+        flex-direction: row;
+    }
+}
+
+/* Large devices (1024px and up) */
+@media (min-width: 1024px) {
+    body {
+        padding: 40px 20px;
+    }
+
+    .container {
+        max-width: 1200px;
+    }
+
+    header h1 {
+        font-size: 3em;
+    }
+
+    .song-item:hover {
+        transform: translateX(10px);
+    }
+}
+
+/* Mobile-specific overrides (max-width approach for small screens) */
+@media (max-width: 767px) {
     header h1 {
         font-size: 1.8em;
     }
@@ -705,8 +763,12 @@ footer {
     }
 }
 
-/* Small mobile (480px and down) */
+/* Extra small mobile (480px and down) */
 @media (max-width: 480px) {
+    body {
+        padding: 10px;
+    }
+
     header h1 {
         font-size: 1.5em;
     }
@@ -728,24 +790,5 @@ footer {
 
     .song-list {
         max-height: 300px;
-    }
-}
-
-/* Large devices (1024px and up) */
-@media (min-width: 1024px) {
-    body {
-        padding: 40px 20px;
-    }
-
-    .container {
-        max-width: 1200px;
-    }
-
-    header h1 {
-        font-size: 3em;
-    }
-
-    .song-item:hover {
-        transform: translateX(10px);
     }
 }
