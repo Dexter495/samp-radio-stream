@@ -1,0 +1,144 @@
+{% extends "admin/base.html" %}
+
+{% block title %}Gestión de Usuarios{% endblock %}
+{% block page_title %}Gestión de Usuarios{% endblock %}
+
+{% block content %}
+<div class="admin-section">
+    <div class="section-header">
+        <h2><i class="fas fa-users"></i> Lista de Usuarios</h2>
+        <button class="btn btn-primary" onclick="toggleCreateUserForm()">
+            <i class="fas fa-user-plus"></i> Crear Usuario
+        </button>
+    </div>
+    
+    <!-- Formulario para crear usuario -->
+    <div id="createUserForm" class="create-user-form" style="display: none;">
+        <form method="POST" action="{{ url_for('admin_create_user') }}">
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="username">
+                        <i class="fas fa-user"></i> Nombre de Usuario
+                    </label>
+                    <input type="text" id="username" name="username" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="password">
+                        <i class="fas fa-lock"></i> Contraseña
+                    </label>
+                    <input type="password" id="password" name="password" required>
+                </div>
+                
+                <div class="form-group checkbox-group">
+                    <label>
+                        <input type="checkbox" name="is_admin" id="is_admin">
+                        <i class="fas fa-shield-alt"></i> Es Administrador
+                    </label>
+                </div>
+                
+                <div class="form-group">
+                    <button type="submit" class="btn btn-success">
+                        <i class="fas fa-check"></i> Crear
+                    </button>
+                    <button type="button" class="btn btn-secondary" onclick="toggleCreateUserForm()">
+                        <i class="fas fa-times"></i> Cancelar
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+    
+    <!-- Buscador -->
+    <div class="search-box">
+        <form method="GET" action="{{ url_for('admin_users') }}">
+            <input type="text" name="search" placeholder="Buscar usuario..." value="{{ search }}">
+            <button type="submit" class="btn btn-secondary">
+                <i class="fas fa-search"></i> Buscar
+            </button>
+            {% if search %}
+            <a href="{{ url_for('admin_users') }}" class="btn btn-secondary">
+                <i class="fas fa-times"></i> Limpiar
+            </a>
+            {% endif %}
+        </form>
+    </div>
+    
+    <!-- Tabla de usuarios -->
+    <div class="table-container">
+        <table class="admin-table">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Usuario</th>
+                    <th>Fecha de Registro</th>
+                    <th>Es Admin</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for user in users %}
+                <tr>
+                    <td>{{ user.id }}</td>
+                    <td>
+                        <i class="fas fa-user"></i>
+                        <strong>{{ user.username }}</strong>
+                        {% if user.username == session.user %}
+                            <span class="badge badge-info">Tú</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ user.created_at }}</td>
+                    <td>
+                        {% if user.is_admin %}
+                            <span class="badge badge-success">
+                                <i class="fas fa-shield-alt"></i> Admin
+                            </span>
+                        {% else %}
+                            <span class="badge badge-secondary">Usuario</span>
+                        {% endif %}
+                    </td>
+                    <td class="actions-cell">
+                        <form method="POST" action="{{ url_for('admin_toggle_admin', user_id=user.id) }}" style="display: inline;">
+                            <button type="submit" class="btn-admin btn-warning" 
+                                    {% if user.username == session.user %}disabled title="No puedes cambiar tus propios permisos"{% endif %}>
+                                <i class="fas fa-shield-alt"></i>
+                                {% if user.is_admin %}Quitar Admin{% else %}Dar Admin{% endif %}
+                            </button>
+                        </form>
+                        
+                        <form method="POST" action="{{ url_for('admin_delete_user', user_id=user.id) }}" 
+                              style="display: inline;"
+                              onsubmit="return confirm('¿Estás seguro de que deseas eliminar al usuario {{ user.username }}? Esta acción no se puede deshacer.');">
+                            <button type="submit" class="btn-admin btn-danger" 
+                                    {% if user.username == session.user %}disabled title="No puedes eliminarte a ti mismo"{% endif %}>
+                                <i class="fas fa-trash"></i> Eliminar
+                            </button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    
+    {% if not users %}
+    <div class="no-data">
+        <i class="fas fa-users-slash"></i>
+        <p>No se encontraron usuarios.</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function toggleCreateUserForm() {
+    const form = document.getElementById('createUserForm');
+    if (form.style.display === 'none') {
+        form.style.display = 'block';
+    } else {
+        form.style.display = 'none';
+    }
+}
+</script>
+{% endblock %}

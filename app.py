@@ -2,15 +2,18 @@
 Servidor Flask para el sistema de radio streaming Starlight
 """
 
-from flask import Flask, render_template, request, jsonify, send_from_directory
+from flask import Flask, render_template, request, jsonify, send_from_directory, session, redirect, url_for, flash
 import os
 import config
 from werkzeug.utils import secure_filename
 import json
+from functools import wraps
+import database
 
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = config.UPLOAD_FOLDER
 app.config['MAX_CONTENT_LENGTH'] = config.MAX_FILE_SIZE
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'starlight-radio-secret-key-change-in-production')
 
 
 def allowed_file(filename):
@@ -71,6 +74,45 @@ def update_playlist(usuario):
             f.write(f"{cancion}\n")
     
     return canciones
+
+
+def admin_required(f):
+    """Decorador para requerir permisos de administrador"""
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'user' not in session:
+            flash('Debes iniciar sesión para acceder a esta página.', 'error')
+            return redirect(url_for('login'))
+        if not database.is_admin(session['user']):
+            flash('Acceso denegado. Se requieren permisos de administrador.', 'error')
+            return redirect(url_for('index'))
+        return f(*args, **kwargs)
+    return decorated_function
+
+
+def get_upload_stats():
+    """Obtener estadísticas de archivos subidos"""
+    total_songs = 0
+    total_size = 0
+    active_users = 0
+    
+    if os.path.exists(config.UPLOAD_FOLDER):
+        for username in os.listdir(config.UPLOAD_FOLDER):
+            user_folder = os.path.join(config.UPLOAD_FOLDER, username)
+            if os.path.isdir(user_folder):
+                songs = [f for f in os.listdir(user_folder) if allowed_file(f)]
+                if songs:
+                    active_users += 1
+                    total_songs += len(songs)
+                    for song in songs:
+                        song_path = os.path.join(user_folder, song)
+                        total_size += os.path.getsize(song_path)
+    
+    return {
+        'total_songs': total_songs,
+        'total_size': total_size,
+        'active_users': active_users
+    }
 
 
 @app.route('/')
@@ -261,6 +303,161 @@ def stop_song(usuario):
     save_user_state(usuario, state)
     
     return jsonify({'success': True, 'estado': state})
+
+
+# ========================================
+# RUTAS DE AUTENTICACIÓN
+# ========================================
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    """Página de login"""
+    if request.method == 'POST':
+        username = request.form.get('username')
+        password = request.form.get('password')
+        
+        if database.authenticate_user(username, password):
+            session['user'] = username
+            flash('¡Inicio de sesión exitoso!', 'success')
+            
+            # Si es admin, redirigir al panel admin
+            if database.is_admin(username):
+                return redirect(url_for('admin_dashboard'))
+            return redirect(url_for('index'))
+        else:
+            flash('Usuario o contraseña incorrectos.', 'error')
+    
+    return render_template('login.html')
+
+
+@app.route('/logout')
+def logout():
+    """Cerrar sesión"""
+    session.pop('user', None)
+    flash('Sesión cerrada exitosamente.', 'success')
+    return redirect(url_for('index'))
+
+
+# ========================================
+# RUTAS DEL PANEL ADMIN
+# ========================================
+
+@app.route('/admin')
+@admin_required
+def admin_dashboard():
+    """Dashboard principal del administrador"""
+    # Obtener estadísticas
+    stats = get_upload_stats()
+    user_count = database.get_user_count()
+    recent_users = database.get_all_users()[:5]  # Últimos 5 usuarios
+    
+    return render_template('admin/dashboard.html', 
+                         stats=stats,
+                         user_count=user_count,
+                         recent_users=recent_users)
+
+
+@app.route('/admin/users')
+@admin_required
+def admin_users():
+    """Lista de usuarios para administración"""
+    users = database.get_all_users()
+    search = request.args.get('search', '')
+    
+    # Filtrar usuarios si hay búsqueda
+    if search:
+        users = [u for u in users if search.lower() in u['username'].lower()]
+    
+    return render_template('admin/users.html', users=users, search=search)
+
+
+@app.route('/admin/users/delete/<int:user_id>', methods=['POST'])
+@admin_required
+def admin_delete_user(user_id):
+    """Eliminar usuario"""
+    # Obtener información del usuario a eliminar
+    user_to_delete = database.get_user_by_id(user_id)
+    
+    if not user_to_delete:
+        flash('Usuario no encontrado.', 'error')
+        return redirect(url_for('admin_users'))
+    
+    # Evitar que el admin se elimine a sí mismo
+    if user_to_delete['username'] == session.get('user'):
+        flash('No puedes eliminar tu propia cuenta.', 'error')
+        return redirect(url_for('admin_users'))
+    
+    # Eliminar el usuario de la base de datos
+    if database.delete_user(user_id):
+        # También eliminar su carpeta de uploads si existe
+        user_folder = os.path.join(config.UPLOAD_FOLDER, secure_filename(user_to_delete['username']))
+        if os.path.exists(user_folder):
+            import shutil
+            shutil.rmtree(user_folder)
+        
+        flash(f'Usuario {user_to_delete["username"]} eliminado exitosamente.', 'success')
+    else:
+        flash('Error al eliminar el usuario.', 'error')
+    
+    return redirect(url_for('admin_users'))
+
+
+@app.route('/admin/users/toggle-admin/<int:user_id>', methods=['POST'])
+@admin_required
+def admin_toggle_admin(user_id):
+    """Cambiar estado de administrador de un usuario"""
+    user = database.get_user_by_id(user_id)
+    
+    if not user:
+        flash('Usuario no encontrado.', 'error')
+        return redirect(url_for('admin_users'))
+    
+    # Evitar que el admin se quite sus propios permisos
+    if user['username'] == session.get('user'):
+        flash('No puedes cambiar tus propios permisos de administrador.', 'error')
+        return redirect(url_for('admin_users'))
+    
+    if database.toggle_admin(user_id):
+        status = 'otorgados' if not user['is_admin'] else 'removidos'
+        flash(f'Permisos de administrador {status} para {user["username"]}.', 'success')
+    else:
+        flash('Error al cambiar permisos.', 'error')
+    
+    return redirect(url_for('admin_users'))
+
+
+@app.route('/admin/users/create', methods=['POST'])
+@admin_required
+def admin_create_user():
+    """Crear nuevo usuario desde el panel admin"""
+    username = request.form.get('username')
+    password = request.form.get('password')
+    is_admin = request.form.get('is_admin') == 'on'
+    
+    if not username or not password:
+        flash('El nombre de usuario y la contraseña son requeridos.', 'error')
+        return redirect(url_for('admin_users'))
+    
+    if database.create_user(username, password, is_admin):
+        flash(f'Usuario {username} creado exitosamente.', 'success')
+    else:
+        flash(f'El usuario {username} ya existe.', 'error')
+    
+    return redirect(url_for('admin_users'))
+
+
+@app.route('/admin/stats')
+@admin_required
+def admin_stats():
+    """Estadísticas detalladas del sistema"""
+    stats = get_upload_stats()
+    user_count = database.get_user_count()
+    all_users = database.get_all_users()
+    
+    return render_template('admin/stats.html',
+                         stats=stats,
+                         user_count=user_count,
+                         users=all_users)
 
 
 if __name__ == '__main__':

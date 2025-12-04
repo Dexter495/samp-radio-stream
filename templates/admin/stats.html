@@ -1,0 +1,102 @@
+{% extends "admin/base.html" %}
+
+{% block title %}Estadísticas{% endblock %}
+{% block page_title %}Estadísticas del Sistema{% endblock %}
+
+{% block content %}
+<div class="stats-grid">
+    <div class="stat-card">
+        <div class="stat-icon">
+            <i class="fas fa-users"></i>
+        </div>
+        <div class="stat-info">
+            <div class="stat-number">{{ user_count }}</div>
+            <div class="stat-label">Usuarios Registrados</div>
+        </div>
+    </div>
+    
+    <div class="stat-card">
+        <div class="stat-icon">
+            <i class="fas fa-music"></i>
+        </div>
+        <div class="stat-info">
+            <div class="stat-number">{{ stats.total_songs }}</div>
+            <div class="stat-label">Canciones Subidas</div>
+        </div>
+    </div>
+    
+    <div class="stat-card">
+        <div class="stat-icon">
+            <i class="fas fa-user-check"></i>
+        </div>
+        <div class="stat-info">
+            <div class="stat-number">{{ stats.active_users }}</div>
+            <div class="stat-label">Usuarios Activos</div>
+        </div>
+    </div>
+    
+    <div class="stat-card">
+        <div class="stat-icon">
+            <i class="fas fa-hard-drive"></i>
+        </div>
+        <div class="stat-info">
+            <div class="stat-number">{{ "%.2f"|format(stats.total_size / 1024 / 1024) }} MB</div>
+            <div class="stat-label">Espacio Usado</div>
+        </div>
+    </div>
+</div>
+
+<div class="admin-section">
+    <h2><i class="fas fa-chart-pie"></i> Detalles de Usuarios</h2>
+    <div class="table-container">
+        <table class="admin-table">
+            <thead>
+                <tr>
+                    <th>Usuario</th>
+                    <th>Admin</th>
+                    <th>Fecha de Registro</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for user in users %}
+                <tr>
+                    <td>
+                        <i class="fas fa-user"></i>
+                        {{ user.username }}
+                    </td>
+                    <td>
+                        {% if user.is_admin %}
+                            <span class="badge badge-success">
+                                <i class="fas fa-shield-alt"></i> Admin
+                            </span>
+                        {% else %}
+                            <span class="badge badge-secondary">Usuario</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ user.created_at }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="admin-section">
+    <h2><i class="fas fa-info-circle"></i> Información del Sistema</h2>
+    <div class="info-cards">
+        <div class="info-card">
+            <h3><i class="fas fa-database"></i> Almacenamiento</h3>
+            <p>Espacio total usado: <strong>{{ "%.2f"|format(stats.total_size / 1024 / 1024) }} MB</strong></p>
+            <p>Canciones totales: <strong>{{ stats.total_songs }}</strong></p>
+            <p>Promedio por usuario: <strong>{{ "%.2f"|format(stats.total_songs / user_count if user_count > 0 else 0) }} canciones</strong></p>
+        </div>
+        
+        <div class="info-card">
+            <h3><i class="fas fa-users"></i> Usuarios</h3>
+            <p>Total registrados: <strong>{{ user_count }}</strong></p>
+            <p>Usuarios activos: <strong>{{ stats.active_users }}</strong></p>
+            <p>Porcentaje activo: <strong>{{ "%.1f"|format((stats.active_users / user_count * 100) if user_count > 0 else 0) }}%</strong></p>
+        </div>
+    </div>
+</div>
+{% endblock %}
