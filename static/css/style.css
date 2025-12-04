@@ -1,8 +1,21 @@
+/* ========================================
+   SPOTIFY THEME - CSS VARIABLES
+   ======================================== */
 :root {
-    --spotify-green: #1db954;
-    --spotify-green-hover: #1ed760;
+    --bg-primary: #121212;
+    --bg-secondary: #181818;
+    --bg-card: #282828;
+    --bg-hover: #333333;
+    --spotify-green: #1DB954;
+    --spotify-green-hover: #1ED760;
+    --text-primary: #FFFFFF;
+    --text-secondary: #B3B3B3;
+    --text-muted: #727272;
 }
 
+/* ========================================
+   RESET & BASE STYLES
+   ======================================== */
 * {
     margin: 0;
     padding: 0;
@@ -10,77 +23,163 @@
 }
 
 body {
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    font-family: 'Montserrat', 'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: var(--bg-primary);
     min-height: 100vh;
     padding: 20px;
-    color: #333;
+    color: var(--text-primary);
+    animation: fadeIn 0.5s ease-in;
 }
 
+/* ========================================
+   ANIMATIONS
+   ======================================== */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes slideUp {
+    from {
+        transform: translateY(20px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+@keyframes pulse {
+    0%, 100% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.05);
+    }
+}
+
+@keyframes pulseGlow {
+    0%, 100% {
+        box-shadow: 0 0 10px rgba(29, 185, 84, 0.5);
+    }
+    50% {
+        box-shadow: 0 0 20px rgba(29, 185, 84, 0.8), 0 0 30px rgba(29, 185, 84, 0.4);
+    }
+}
+
+/* ========================================
+   CONTAINER & LAYOUT
+   ======================================== */
 .container {
     max-width: 1000px;
     margin: 0 auto;
-    background: white;
-    border-radius: 15px;
-    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+    background: var(--bg-secondary);
+    border-radius: 8px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
     overflow: hidden;
+    animation: slideUp 0.6s ease-out;
 }
 
+/* ========================================
+   HEADER
+   ======================================== */
 header {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
+    background: linear-gradient(135deg, var(--bg-card) 0%, var(--bg-secondary) 100%);
+    color: var(--text-primary);
     padding: 30px;
     text-align: center;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 header h1 {
     font-size: 2.5em;
     margin-bottom: 10px;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+header h1 i {
+    color: var(--spotify-green);
 }
 
 header h2 {
     font-size: 1.3em;
-    font-weight: 300;
+    font-weight: 400;
+    color: var(--text-secondary);
 }
 
 .username {
-    font-weight: bold;
-    color: #ffd700;
+    font-weight: 600;
+    color: var(--spotify-green);
 }
 
+/* ========================================
+   WELCOME SECTION
+   ======================================== */
 .welcome {
     padding: 40px;
     text-align: center;
 }
 
 .welcome h2 {
-    color: #667eea;
+    color: var(--spotify-green);
     margin-bottom: 20px;
+    font-weight: 600;
+}
+
+.welcome p {
+    color: var(--text-secondary);
+    line-height: 1.6;
 }
 
 .welcome code {
-    background: #f4f4f4;
+    background: var(--bg-card);
     padding: 10px 15px;
-    border-radius: 5px;
+    border-radius: 8px;
     display: inline-block;
     margin: 10px 0;
     font-size: 1.1em;
+    color: var(--spotify-green);
+    border: 1px solid var(--bg-hover);
 }
 
+.welcome strong {
+    color: var(--text-primary);
+}
+
+/* ========================================
+   PLAYER SECTION
+   ======================================== */
 .player-section {
     padding: 30px;
 }
 
+/* ========================================
+   UPLOAD SECTION
+   ======================================== */
 .upload-section {
-    background: #f8f9fa;
+    background: var(--bg-card);
     padding: 25px;
-    border-radius: 10px;
+    border-radius: 8px;
     margin-bottom: 25px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    transition: all 0.3s ease;
+}
+
+.upload-section:hover {
+    border-color: rgba(29, 185, 84, 0.3);
 }
 
 .upload-section h3 {
-    color: #667eea;
+    color: var(--text-primary);
     margin-bottom: 15px;
+    font-weight: 600;
+    font-size: 1.2em;
 }
 
 #uploadForm {
@@ -92,93 +191,158 @@ header h2 {
 #fileInput {
     flex: 1;
     min-width: 200px;
-    padding: 10px;
-    border: 2px solid #ddd;
-    border-radius: 5px;
+    padding: 12px;
+    border: 2px solid var(--bg-hover);
+    border-radius: 8px;
     font-size: 1em;
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    transition: all 0.3s ease;
 }
 
+#fileInput:hover {
+    border-color: var(--spotify-green);
+}
+
+#fileInput:focus {
+    outline: none;
+    border-color: var(--spotify-green);
+    box-shadow: 0 0 0 2px rgba(29, 185, 84, 0.1);
+}
+
+/* ========================================
+   BUTTONS
+   ======================================== */
 .btn {
     padding: 12px 24px;
     border: none;
-    border-radius: 5px;
+    border-radius: 50px;
     cursor: pointer;
     font-size: 1em;
     font-weight: 600;
     transition: all 0.3s ease;
+    font-family: 'Montserrat', sans-serif;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
 }
 
 .btn:hover:not(:disabled) {
-    transform: translateY(-2px);
-    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+    transform: scale(1.05);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+}
+
+.btn:active:not(:disabled) {
+    transform: scale(0.98);
 }
 
 .btn:disabled {
     opacity: 0.5;
     cursor: not-allowed;
+    transform: none !important;
 }
 
 .btn-primary {
-    background: #667eea;
-    color: white;
+    background: var(--spotify-green);
+    color: var(--text-primary);
 }
 
 .btn-primary:hover:not(:disabled) {
-    background: #5568d3;
+    background: var(--spotify-green-hover);
+    box-shadow: 0 4px 16px rgba(29, 185, 84, 0.4);
 }
 
 .btn-success {
-    background: #28a745;
-    color: white;
+    background: var(--spotify-green);
+    color: var(--text-primary);
+}
+
+.btn-success:hover:not(:disabled) {
+    background: var(--spotify-green-hover);
+}
+
+.btn-success.playing {
+    animation: pulse 2s ease-in-out infinite;
 }
 
 .btn-warning {
-    background: #ffc107;
-    color: #333;
+    background: #ffa726;
+    color: var(--text-primary);
+}
+
+.btn-warning:hover:not(:disabled) {
+    background: #fb8c00;
 }
 
 .btn-danger {
-    background: #dc3545;
-    color: white;
+    background: #ef5350;
+    color: var(--text-primary);
+}
+
+.btn-danger:hover:not(:disabled) {
+    background: #e53935;
 }
 
 .btn-secondary {
-    background: #6c757d;
-    color: white;
+    background: var(--bg-hover);
+    color: var(--text-primary);
     margin-bottom: 15px;
 }
 
+.btn-secondary:hover:not(:disabled) {
+    background: var(--bg-card);
+}
+
+.btn-small {
+    padding: 8px 16px;
+    font-size: 0.9em;
+}
+
+/* ========================================
+   PLAYER CONTROLS
+   ======================================== */
 .player-controls {
-    background: #f8f9fa;
+    background: var(--bg-card);
     padding: 25px;
-    border-radius: 10px;
+    border-radius: 8px;
     margin-bottom: 25px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    transition: all 0.3s ease;
+}
+
+.player-controls:hover {
+    border-color: rgba(29, 185, 84, 0.3);
 }
 
 .player-controls h3 {
-    color: #667eea;
+    color: var(--text-primary);
     margin-bottom: 15px;
+    font-weight: 600;
+    font-size: 1.2em;
 }
 
 .current-song {
-    background: white;
+    background: var(--bg-secondary);
     padding: 15px;
     border-radius: 8px;
     margin-bottom: 15px;
-    border-left: 4px solid #667eea;
+    border-left: 4px solid var(--bg-hover);
+    transition: all 0.3s ease;
 }
 
 .current-song p {
     font-size: 1.1em;
-    color: #333;
+    color: var(--text-primary);
 }
 
 .current-song.playing {
-    border-left-color: #28a745;
+    border-left-color: var(--spotify-green);
+    animation: pulseGlow 2s ease-in-out infinite;
 }
 
 .current-song.paused {
-    border-left-color: #ffc107;
+    border-left-color: #ffa726;
 }
 
 .control-buttons {
@@ -189,22 +353,43 @@ header h2 {
 }
 
 .stream-info {
-    padding: 10px;
-    background: white;
-    border-radius: 5px;
+    padding: 12px;
+    background: var(--bg-secondary);
+    border-radius: 8px;
+    font-size: 0.9em;
+    color: var(--text-secondary);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.stream-info code {
+    color: var(--spotify-green);
+    background: var(--bg-card);
+    padding: 4px 8px;
+    border-radius: 4px;
     font-size: 0.9em;
 }
 
+/* ========================================
+   PLAYLIST SECTION
+   ======================================== */
 .playlist-section {
-    background: #f8f9fa;
+    background: var(--bg-card);
     padding: 25px;
-    border-radius: 10px;
+    border-radius: 8px;
     margin-bottom: 25px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    transition: all 0.3s ease;
+}
+
+.playlist-section:hover {
+    border-color: rgba(29, 185, 84, 0.3);
 }
 
 .playlist-section h3 {
-    color: #667eea;
+    color: var(--text-primary);
     margin-bottom: 15px;
+    font-weight: 600;
+    font-size: 1.2em;
 }
 
 .song-list {
@@ -213,20 +398,22 @@ header h2 {
 }
 
 .song-item {
-    background: white;
+    background: var(--bg-secondary);
     padding: 15px;
     margin-bottom: 10px;
     border-radius: 8px;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    border-left: 3px solid #667eea;
+    border-left: 3px solid var(--bg-hover);
     transition: all 0.3s ease;
 }
 
 .song-item:hover {
     transform: translateX(5px);
-    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
+    background: var(--bg-hover);
+    border-left-color: var(--spotify-green);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
 }
 
 .song-info {
@@ -235,13 +422,20 @@ header h2 {
 
 .song-name {
     font-weight: 600;
-    color: #333;
+    color: var(--text-primary);
     margin-bottom: 5px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.song-name i {
+    color: var(--spotify-green);
 }
 
 .song-size {
     font-size: 0.85em;
-    color: #666;
+    color: var(--text-muted);
 }
 
 .song-actions {
@@ -254,49 +448,78 @@ header h2 {
     font-size: 0.9em;
 }
 
+/* ========================================
+   INFO SECTION
+   ======================================== */
 .info-section {
     padding: 30px;
-    background: #f8f9fa;
+    background: var(--bg-card);
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 .info-section h3 {
-    color: #667eea;
+    color: var(--text-primary);
     margin-bottom: 15px;
+    font-weight: 600;
+    font-size: 1.2em;
 }
 
 .info-box {
-    background: white;
+    background: var(--bg-secondary);
     padding: 20px;
-    border-radius: 10px;
-    border-left: 4px solid #667eea;
+    border-radius: 8px;
+    border-left: 4px solid var(--spotify-green);
+    border: 1px solid rgba(29, 185, 84, 0.3);
 }
 
 .info-box ul {
     list-style-position: inside;
     line-height: 2;
+    color: var(--text-secondary);
+}
+
+.info-box li {
+    padding-left: 8px;
 }
 
 .info-box code {
-    background: #f4f4f4;
+    background: var(--bg-card);
     padding: 10px 15px;
-    border-radius: 5px;
+    border-radius: 8px;
     display: block;
     margin: 10px 0;
     word-break: break-all;
+    color: var(--spotify-green);
+    border: 1px solid rgba(29, 185, 84, 0.2);
+    font-size: 0.95em;
+}
+
+.info-box p {
+    color: var(--text-secondary);
+    margin-bottom: 10px;
+}
+
+.info-box strong {
+    color: var(--text-primary);
 }
 
 .hint {
     font-size: 0.9em;
-    color: #666;
+    color: var(--text-muted);
     font-style: italic;
     margin-top: 10px;
 }
 
+/* ========================================
+   STATUS MESSAGES
+   ======================================== */
 .status-message {
     margin-top: 15px;
     padding: 12px;
-    border-radius: 5px;
+    border-radius: 8px;
     display: none;
+    border: 1px solid;
+    animation: slideUp 0.3s ease-out;
 }
 
 .status-message.show {
@@ -304,31 +527,42 @@ header h2 {
 }
 
 .status-message.success {
-    background: #d4edda;
-    color: #155724;
-    border: 1px solid #c3e6cb;
+    background: rgba(29, 185, 84, 0.15);
+    color: var(--spotify-green);
+    border-color: var(--spotify-green);
 }
 
 .status-message.error {
-    background: #f8d7da;
-    color: #721c24;
-    border: 1px solid #f5c6cb;
+    background: rgba(239, 83, 80, 0.15);
+    color: #ef5350;
+    border-color: #ef5350;
 }
 
 .loading {
     text-align: center;
-    color: #666;
+    color: var(--text-muted);
     padding: 20px;
 }
 
+.error {
+    color: #ef5350;
+}
+
+/* ========================================
+   FOOTER
+   ======================================== */
 footer {
-    background: #333;
-    color: white;
+    background: var(--bg-primary);
+    color: var(--text-muted);
     text-align: center;
     padding: 20px;
     font-size: 0.9em;
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
 }
 
+/* ========================================
+   TIP BOX (Y2Mate)
+   ======================================== */
 .tip-box {
     background: rgba(29, 185, 84, 0.1);
     border: 1px solid var(--spotify-green);
@@ -342,6 +576,7 @@ footer {
     color: var(--spotify-green);
     text-decoration: none;
     font-weight: 600;
+    transition: color 0.3s ease;
 }
 
 .tip-box a:hover {
@@ -353,33 +588,81 @@ footer {
     color: var(--spotify-green);
 }
 
-/* Scrollbar personalizado */
+.tip-box p {
+    color: var(--text-secondary);
+}
+
+.tip-box strong {
+    color: var(--text-primary);
+}
+
+/* ========================================
+   SCROLLBAR (Webkit Browsers)
+   ======================================== */
 .song-list::-webkit-scrollbar {
-    width: 8px;
+    width: 10px;
 }
 
 .song-list::-webkit-scrollbar-track {
-    background: #f1f1f1;
-    border-radius: 4px;
+    background: var(--bg-secondary);
+    border-radius: 8px;
 }
 
 .song-list::-webkit-scrollbar-thumb {
-    background: #667eea;
-    border-radius: 4px;
+    background: var(--bg-hover);
+    border-radius: 8px;
+    border: 2px solid var(--bg-secondary);
 }
 
 .song-list::-webkit-scrollbar-thumb:hover {
-    background: #5568d3;
+    background: var(--spotify-green);
 }
 
-/* Responsive */
+/* Firefox scrollbar */
+.song-list {
+    scrollbar-width: thin;
+    scrollbar-color: var(--bg-hover) var(--bg-secondary);
+}
+
+/* ========================================
+   RESPONSIVE DESIGN (Mobile-First)
+   ======================================== */
+   
+/* Base styles already mobile-friendly */
+
+/* Small devices (480px and up) */
+@media (min-width: 480px) {
+    body {
+        padding: 15px;
+    }
+    
+    .btn {
+        min-width: auto;
+    }
+}
+
+/* Medium devices (768px and up) */
 @media (max-width: 768px) {
+    body {
+        padding: 10px;
+    }
+
     header h1 {
         font-size: 1.8em;
     }
 
+    header h2 {
+        font-size: 1.1em;
+    }
+
     .player-section {
         padding: 15px;
+    }
+
+    .upload-section,
+    .player-controls,
+    .playlist-section {
+        padding: 20px;
     }
 
     .song-item {
@@ -391,5 +674,78 @@ footer {
     .song-actions {
         width: 100%;
         justify-content: flex-start;
+        flex-wrap: wrap;
+    }
+
+    .btn {
+        width: 100%;
+        justify-content: center;
+        min-height: 44px; /* Touch-friendly */
+    }
+
+    .btn-small {
+        flex: 1;
+        min-width: 120px;
+    }
+
+    #uploadForm {
+        flex-direction: column;
+    }
+
+    #fileInput {
+        width: 100%;
+    }
+
+    .control-buttons {
+        flex-direction: column;
+    }
+
+    .info-box code {
+        font-size: 0.85em;
+    }
+}
+
+/* Small mobile (480px and down) */
+@media (max-width: 480px) {
+    header h1 {
+        font-size: 1.5em;
+    }
+
+    header h2 {
+        font-size: 1em;
+    }
+
+    .container {
+        border-radius: 4px;
+    }
+
+    .upload-section,
+    .player-controls,
+    .playlist-section,
+    .info-section {
+        padding: 15px;
+    }
+
+    .song-list {
+        max-height: 300px;
+    }
+}
+
+/* Large devices (1024px and up) */
+@media (min-width: 1024px) {
+    body {
+        padding: 40px 20px;
+    }
+
+    .container {
+        max-width: 1200px;
+    }
+
+    header h1 {
+        font-size: 3em;
+    }
+
+    .song-item:hover {
+        transform: translateX(10px);
     }
 }

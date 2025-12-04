@@ -43,7 +43,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // Mostrar mensaje de estado
 function showStatus(message, isError = false) {
-    uploadStatus.textContent = message;
+    uploadStatus.innerHTML = message;
     uploadStatus.className = 'status-message show ' + (isError ? 'error' : 'success');
     
     setTimeout(() => {
@@ -78,14 +78,14 @@ async function handleUpload(e) {
         const data = await response.json();
 
         if (response.ok) {
-            showStatus(`✅ ${data.filename} subido correctamente`);
+            showStatus(`<i class="fas fa-check-circle"></i> ${data.filename} subido correctamente`);
             fileInput.value = '';
             loadSongs();
         } else {
-            showStatus(`❌ Error: ${data.error}`, true);
+            showStatus(`<i class="fas fa-exclamation-circle"></i> Error: ${data.error}`, true);
         }
     } catch (error) {
-        showStatus(`❌ Error de conexión: ${error.message}`, true);
+        showStatus(`<i class="fas fa-exclamation-circle"></i> Error de conexión: ${error.message}`, true);
     }
 }
 
@@ -125,7 +125,7 @@ function displaySongs(canciones) {
 
         const songName = document.createElement('div');
         songName.className = 'song-name';
-        songName.textContent = cancion.nombre;
+        songName.innerHTML = `<i class="fas fa-music"></i> ${cancion.nombre}`;
 
         const songSize = document.createElement('div');
         songSize.className = 'song-size';
@@ -139,12 +139,12 @@ function displaySongs(canciones) {
 
         const playBtn = document.createElement('button');
         playBtn.className = 'btn btn-success btn-small';
-        playBtn.textContent = '▶️ Reproducir';
+        playBtn.innerHTML = '<i class="fas fa-play"></i> Reproducir';
         playBtn.onclick = () => playSong(cancion.nombre);
 
         const deleteBtn = document.createElement('button');
         deleteBtn.className = 'btn btn-danger btn-small';
-        deleteBtn.textContent = '🗑️ Eliminar';
+        deleteBtn.innerHTML = '<i class="fas fa-trash"></i> Eliminar';
         deleteBtn.onclick = () => deleteSong(cancion.nombre);
 
         songActions.appendChild(playBtn);
@@ -180,7 +180,7 @@ async function playSong(nombre) {
         if (response.ok) {
             currentState = data.estado;
             updatePlayerState();
-            showStatus(`🎵 Reproduciendo: ${nombre}`);
+            showStatus(`<i class="fas fa-music"></i> Reproduciendo: ${nombre}`);
             
             if (data.stream_url) {
                 streamInfo.innerHTML = `
@@ -189,10 +189,10 @@ async function playSong(nombre) {
                 `;
             }
         } else {
-            showStatus(`❌ Error: ${data.error}`, true);
+            showStatus(`<i class="fas fa-exclamation-circle"></i> Error: ${data.error}`, true);
         }
     } catch (error) {
-        showStatus(`❌ Error de conexión: ${error.message}`, true);
+        showStatus(`<i class="fas fa-exclamation-circle"></i> Error de conexión: ${error.message}`, true);
     }
 }
 
@@ -208,12 +208,12 @@ async function pauseSong() {
         if (response.ok) {
             currentState = data.estado;
             updatePlayerState();
-            showStatus('⏸️ Reproducción pausada');
+            showStatus('<i class="fas fa-pause"></i> Reproducción pausada');
         } else {
-            showStatus(`❌ Error: ${data.error}`, true);
+            showStatus(`<i class="fas fa-exclamation-circle"></i> Error: ${data.error}`, true);
         }
     } catch (error) {
-        showStatus(`❌ Error de conexión: ${error.message}`, true);
+        showStatus(`<i class="fas fa-exclamation-circle"></i> Error de conexión: ${error.message}`, true);
     }
 }
 
@@ -229,12 +229,12 @@ async function resumeSong() {
         if (response.ok) {
             currentState = data.estado;
             updatePlayerState();
-            showStatus('▶️ Reproducción continuada');
+            showStatus('<i class="fas fa-play"></i> Reproducción continuada');
         } else {
-            showStatus(`❌ Error: ${data.error}`, true);
+            showStatus(`<i class="fas fa-exclamation-circle"></i> Error: ${data.error}`, true);
         }
     } catch (error) {
-        showStatus(`❌ Error de conexión: ${error.message}`, true);
+        showStatus(`<i class="fas fa-exclamation-circle"></i> Error de conexión: ${error.message}`, true);
     }
 }
 
@@ -250,13 +250,13 @@ async function stopSong() {
         if (response.ok) {
             currentState = data.estado;
             updatePlayerState();
-            showStatus('⏹️ Reproducción detenida');
+            showStatus('<i class="fas fa-stop"></i> Reproducción detenida');
             streamInfo.innerHTML = '';
         } else {
-            showStatus(`❌ Error: ${data.error}`, true);
+            showStatus(`<i class="fas fa-exclamation-circle"></i> Error: ${data.error}`, true);
         }
     } catch (error) {
-        showStatus(`❌ Error de conexión: ${error.message}`, true);
+        showStatus(`<i class="fas fa-exclamation-circle"></i> Error de conexión: ${error.message}`, true);
     }
 }
 
@@ -274,13 +274,13 @@ async function deleteSong(nombre) {
         const data = await response.json();
 
         if (response.ok) {
-            showStatus(`🗑️ ${nombre} eliminado`);
+            showStatus(`<i class="fas fa-trash"></i> ${nombre} eliminado`);
             loadSongs();
         } else {
-            showStatus(`❌ Error: ${data.error}`, true);
+            showStatus(`<i class="fas fa-exclamation-circle"></i> Error: ${data.error}`, true);
         }
     } catch (error) {
-        showStatus(`❌ Error de conexión: ${error.message}`, true);
+        showStatus(`<i class="fas fa-exclamation-circle"></i> Error de conexión: ${error.message}`, true);
     }
 }
 
@@ -288,9 +288,9 @@ async function deleteSong(nombre) {
 function updatePlayerState() {
     if (currentState.playing) {
         currentSongDiv.innerHTML = `
-            <p>🎵 <strong>${currentState.current_song}</strong></p>
-            <p style="font-size: 0.9em; color: #666;">
-                Estado: ${currentState.paused ? '⏸️ Pausado' : '▶️ Reproduciendo'}
+            <p><i class="fas fa-music"></i> <strong>${currentState.current_song}</strong></p>
+            <p style="font-size: 0.9em; color: var(--text-muted);">
+                Estado: ${currentState.paused ? '<i class="fas fa-pause"></i> Pausado' : '<i class="fas fa-play"></i> Reproduciendo'}
             </p>
         `;
         currentSongDiv.className = 'current-song ' + (currentState.paused ? 'paused' : 'playing');
