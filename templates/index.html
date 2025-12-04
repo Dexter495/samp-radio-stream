@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SA-MP Radio Stream{% if usuario %} - {{ usuario }}{% endif %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🎵 SA-MP Radio Stream</h1>
+            {% if usuario %}
+            <h2>Usuario: <span class="username">{{ usuario }}</span></h2>
+            {% endif %}
+        </header>
+
+        {% if not usuario %}
+        <div class="welcome">
+            <h2>Bienvenido</h2>
+            <p>Para acceder a tu radio personal, ingresa a: <code>http://localhost:5000/TuNombreSAMP</code></p>
+            <p>Reemplaza <strong>TuNombreSAMP</strong> con tu nombre de usuario del juego.</p>
+            <div class="info-box">
+                <h3>Características</h3>
+                <ul>
+                    <li>Sube tus canciones en formato MP3</li>
+                    <li>Reproduce tu propia música</li>
+                    <li>Controla la reproducción (play, pause, stop)</li>
+                    <li>Gestiona tu biblioteca personal</li>
+                    <li>Hasta 30 usuarios simultáneos</li>
+                </ul>
+            </div>
+        </div>
+        {% else %}
+        <div class="player-section">
+            <div class="upload-section">
+                <h3>📤 Subir Canción</h3>
+                <form id="uploadForm" enctype="multipart/form-data">
+                    <input type="file" id="fileInput" accept=".mp3" required>
+                    <button type="submit" class="btn btn-primary">Subir MP3</button>
+                </form>
+                <div id="uploadStatus" class="status-message"></div>
+            </div>
+
+            <div class="player-controls">
+                <h3>🎮 Control de Reproducción</h3>
+                <div id="currentSong" class="current-song">
+                    <p>No hay canción seleccionada</p>
+                </div>
+                <div class="control-buttons">
+                    <button id="pauseBtn" class="btn btn-warning" disabled>⏸️ Pausar</button>
+                    <button id="resumeBtn" class="btn btn-success" disabled>▶️ Continuar</button>
+                    <button id="stopBtn" class="btn btn-danger" disabled>⏹️ Detener</button>
+                </div>
+                <div id="streamInfo" class="stream-info"></div>
+            </div>
+
+            <div class="playlist-section">
+                <h3>🎼 Mis Canciones</h3>
+                <button id="refreshBtn" class="btn btn-secondary">🔄 Actualizar</button>
+                <div id="songList" class="song-list">
+                    <p class="loading">Cargando canciones...</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="info-section">
+            <h3>ℹ️ Información del Stream</h3>
+            <div class="info-box">
+                <p><strong>Tu URL de Stream:</strong></p>
+                <code id="streamUrl">http://localhost:8000/{{ usuario }}</code>
+                <p class="hint">Usa esta URL en SA-MP para escuchar tu música</p>
+            </div>
+        </div>
+        {% endif %}
+
+        <footer>
+            <p>SA-MP Radio Streaming System | Máximo 30 usuarios | Solo MP3</p>
+        </footer>
+    </div>
+
+    {% if usuario %}
+    <script>
+        const USUARIO = "{{ usuario }}";
+    </script>
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+    {% endif %}
+</body>
+</html>
