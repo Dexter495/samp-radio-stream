@@ -2,7 +2,7 @@
 Servidor Flask para el sistema de radio streaming Starlight
 """
 
-from flask import Flask, render_template, request, jsonify, send_from_directory, session, redirect, url_for, flash
+from flask import Flask, render_template, request, jsonify, send_from_directory, session, redirect, url_for
 import os
 import config
 from werkzeug.utils import secure_filename
@@ -13,6 +13,9 @@ import database
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = config.UPLOAD_FOLDER
 app.config['MAX_CONTENT_LENGTH'] = config.MAX_FILE_SIZE
+# Generate a random secret key for sessions
+# Note: This key will change on restart, invalidating existing sessions
+# For production, use a fixed key from environment variable or config file
 app.config['SECRET_KEY'] = secrets.token_hex(32)
 
 # Inicializar base de datos al iniciar la aplicación
