@@ -4,7 +4,16 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Starlight Radio Stream{% if usuario %} - {{ usuario }}{% endif %}</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&family=Roboto:wght@300;400;500&display=swap" rel="stylesheet">
+    
+    <!-- Font Awesome 6 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    
+    <!-- Custom CSS -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
 <body>
@@ -35,10 +44,10 @@
         {% else %}
         <div class="player-section">
             <div class="upload-section">
-                <h3>📤 Subir Canción</h3>
+                <h3><i class="fas fa-upload"></i> Subir Canción</h3>
                 <form id="uploadForm" enctype="multipart/form-data">
                     <input type="file" id="fileInput" accept=".mp3" required>
-                    <button type="submit" class="btn btn-primary">Subir MP3</button>
+                    <button type="submit" class="btn btn-primary"><i class="fas fa-cloud-arrow-up"></i> Subir MP3</button>
                 </form>
                 <div class="tip-box">
                     <p><i class="fas fa-lightbulb"></i> <strong>💡 ¿Necesitas convertir una canción a MP3?</strong></p>
@@ -48,21 +57,21 @@
             </div>
 
             <div class="player-controls">
-                <h3>🎮 Control de Reproducción</h3>
+                <h3><i class="fas fa-gamepad"></i> Control de Reproducción</h3>
                 <div id="currentSong" class="current-song">
                     <p>No hay canción seleccionada</p>
                 </div>
                 <div class="control-buttons">
-                    <button id="pauseBtn" class="btn btn-warning" disabled>⏸️ Pausar</button>
-                    <button id="resumeBtn" class="btn btn-success" disabled>▶️ Continuar</button>
-                    <button id="stopBtn" class="btn btn-danger" disabled>⏹️ Detener</button>
+                    <button id="pauseBtn" class="btn btn-warning" disabled><i class="fas fa-pause"></i> Pausar</button>
+                    <button id="resumeBtn" class="btn btn-success" disabled><i class="fas fa-play"></i> Continuar</button>
+                    <button id="stopBtn" class="btn btn-danger" disabled><i class="fas fa-stop"></i> Detener</button>
                 </div>
                 <div id="streamInfo" class="stream-info"></div>
             </div>
 
             <div class="playlist-section">
-                <h3>🎼 Mis Canciones</h3>
-                <button id="refreshBtn" class="btn btn-secondary">🔄 Actualizar</button>
+                <h3><i class="fas fa-music"></i> Mis Canciones</h3>
+                <button id="refreshBtn" class="btn btn-secondary"><i class="fas fa-rotate"></i> Actualizar</button>
                 <div id="songList" class="song-list">
                     <p class="loading">Cargando canciones...</p>
                 </div>
@@ -70,7 +79,7 @@
         </div>
 
         <div class="info-section">
-            <h3>ℹ️ Información del Stream</h3>
+            <h3><i class="fas fa-circle-info"></i> Información del Stream</h3>
             <div class="info-box">
                 <p><strong>Tu URL de Stream:</strong></p>
                 <code id="streamUrl">http://localhost:8000/{{ usuario }}</code>
