@@ -6,6 +6,9 @@ uploads/*
 playlists/*
 !playlists/.gitkeep
 
+# Scripts de Liquidsoap generados dinámicamente
+liquidsoap/radio_*.liq
+
 # Base de datos SQLite
 *.db
 
