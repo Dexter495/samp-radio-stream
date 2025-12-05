@@ -66,10 +66,17 @@ class AudioVisualizer {
             this.bufferLength = this.analyser.frequencyBinCount;
             this.dataArray = new Uint8Array(this.bufferLength);
             
-            // Connect audio source
-            const source = this.audioContext.createMediaElementSource(audioElement);
-            source.connect(this.analyser);
-            this.analyser.connect(this.audioContext.destination);
+            // Connect audio source - only create source if not already created
+            if (!this.audioSource) {
+                this.audioSource = this.audioContext.createMediaElementSource(audioElement);
+                this.audioSource.connect(this.analyser);
+                this.analyser.connect(this.audioContext.destination);
+            } else {
+                // Reconnect existing source
+                this.audioSource.disconnect();
+                this.audioSource.connect(this.analyser);
+                this.analyser.connect(this.audioContext.destination);
+            }
             
             return true;
         } catch (error) {
