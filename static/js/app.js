@@ -1236,11 +1236,11 @@ function showSpotifySongsModal(playlistName, songs) {
         }
     });
     
-    // Add change listeners for checkboxes
-    songsList.querySelectorAll('.spotify-song-checkbox').forEach(checkbox => {
-        checkbox.addEventListener('change', (e) => {
+    // Add change listener using event delegation on parent
+    songsList.addEventListener('change', (e) => {
+        if (e.target.classList.contains('spotify-song-checkbox')) {
             updateSpotifySongItemStyle(parseInt(e.target.dataset.index));
-        });
+        }
     });
     
     openModal(spotifySongsModal);
@@ -1434,6 +1434,9 @@ async function addToDownloadQueue(title, url) {
 
 // Monitorear progreso de descarga
 async function monitorDownload(downloadId) {
+    let retryCount = 0;
+    const maxRetries = 60; // Max 2 minutes (60 * 2 seconds)
+    
     const checkStatus = async () => {
         try {
             const response = await fetch(`/api/${USUARIO}/download/status/${downloadId}`);
@@ -1441,17 +1444,44 @@ async function monitorDownload(downloadId) {
             if (response.ok) {
                 const status = await response.json();
                 updateDownloadStatus(downloadId, status);
+                retryCount = 0; // Reset on successful request
                 
                 if (status.status === 'downloading') {
                     // Poll every 2 seconds to reduce server load
-                    setTimeout(checkStatus, 2000);
+                    if (retryCount < maxRetries) {
+                        retryCount++;
+                        setTimeout(checkStatus, 2000);
+                    } else {
+                        // Max retries reached, mark as error
+                        updateDownloadStatus(downloadId, {
+                            status: 'error',
+                            progress: 0,
+                            error: 'Tiempo de descarga excedido'
+                        });
+                    }
                 } else if (status.status === 'completed') {
                     // Recargar lista de canciones
                     setTimeout(loadSongs, 1000);
                 }
+            } else {
+                retryCount++;
+                if (retryCount < maxRetries) {
+                    setTimeout(checkStatus, 2000);
+                }
             }
         } catch (error) {
             console.error('Error checking download status:', error);
+            retryCount++;
+            if (retryCount < maxRetries) {
+                // Retry with exponential backoff
+                setTimeout(checkStatus, Math.min(2000 * Math.pow(1.5, retryCount), 10000));
+            } else {
+                updateDownloadStatus(downloadId, {
+                    status: 'error',
+                    progress: 0,
+                    error: 'Error de conexión'
+                });
+            }
         }
     };
     

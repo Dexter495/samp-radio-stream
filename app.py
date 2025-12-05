@@ -641,7 +641,7 @@ def admin_stats():
 # RUTAS DE IMPORTACIÓN (SPOTIFY & YOUTUBE)
 # ========================================
 
-# Estado global de descargas
+# Estado global de descargas - protegido por download_status_lock
 download_status = {}
 
 def init_spotify():
