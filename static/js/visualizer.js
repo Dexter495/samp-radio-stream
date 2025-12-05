@@ -243,7 +243,7 @@ class AudioVisualizer {
     }
 }
 
-// Export for use in app.js
-if (typeof module !== 'undefined' && module.exports) {
-    module.exports = AudioVisualizer;
+// Make available globally for browser use
+if (typeof window !== 'undefined') {
+    window.AudioVisualizer = AudioVisualizer;
 }

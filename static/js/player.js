@@ -178,7 +178,7 @@ class EnhancedPlayer {
     }
 }
 
-// Export for use in app.js
-if (typeof module !== 'undefined' && module.exports) {
-    module.exports = EnhancedPlayer;
+// Make available globally for browser use
+if (typeof window !== 'undefined') {
+    window.EnhancedPlayer = EnhancedPlayer;
 }

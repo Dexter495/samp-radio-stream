@@ -129,7 +129,7 @@ class ParticleSystem {
     }
 }
 
-// Export for use in app.js
-if (typeof module !== 'undefined' && module.exports) {
-    module.exports = ParticleSystem;
+// Make available globally for browser use
+if (typeof window !== 'undefined') {
+    window.ParticleSystem = ParticleSystem;
 }
