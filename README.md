@@ -10,6 +10,9 @@ Sistema completo de radio streaming donde cada jugador de SA-MP puede subir y re
 - **Gestión de música** - Subir, reproducir, pausar y eliminar canciones
 - **Interfaz web** - Control completo desde el navegador
 - **Formato MP3** - Soporte para archivos de audio MP3
+- **🎧 Importación desde Spotify** - Importa playlists completas de Spotify
+- **🎬 Descarga desde YouTube** - Busca y descarga canciones desde YouTube
+- **📥 Cola de descargas** - Sistema de cola con seguimiento de progreso en tiempo real
 
 ## 🛠️ Stack Tecnológico
 
@@ -48,6 +51,7 @@ samp-radio-stream/
 - **Python 3.8+**
 - **Liquidsoap** (servidor de streaming de audio)
 - **Icecast2** (servidor de distribución de streams)
+- **FFmpeg** (requerido para conversión de audio desde YouTube)
 
 ### 1. Instalar Dependencias del Sistema
 
@@ -55,19 +59,19 @@ samp-radio-stream/
 
 ```bash
 sudo apt update
-sudo apt install -y python3 python3-pip liquidsoap icecast2
+sudo apt install -y python3 python3-pip liquidsoap icecast2 ffmpeg
 ```
 
 #### En CentOS/RHEL:
 
 ```bash
-sudo yum install -y python3 python3-pip liquidsoap icecast
+sudo yum install -y python3 python3-pip liquidsoap icecast ffmpeg
 ```
 
 #### En macOS (con Homebrew):
 
 ```bash
-brew install python3 liquidsoap icecast
+brew install python3 liquidsoap icecast ffmpeg
 ```
 
 ### 2. Clonar el Repositorio
@@ -153,6 +157,30 @@ gunicorn -w 4 -b 0.0.0.0:5000 app:app
 2. La canción comenzará a transmitirse en tu stream personal
 3. Usa los botones de control para pausar/continuar/detener
 
+### Importar desde Spotify
+
+1. Ve a la sección "Importar Música" y selecciona la pestaña "Spotify"
+2. Copia la URL de tu playlist de Spotify (ej: https://open.spotify.com/playlist/...)
+3. Pega la URL y haz clic en "Obtener canciones"
+4. Selecciona las canciones que deseas descargar
+5. Haz clic en "Descargar seleccionadas"
+6. Las canciones se buscarán en YouTube y se descargarán automáticamente
+
+### Descargar desde YouTube
+
+1. Ve a la sección "Importar Música" y selecciona la pestaña "YouTube"
+2. Ingresa el nombre de la canción o artista que buscas
+3. Haz clic en "Buscar"
+4. Selecciona el video correcto de los resultados
+5. Haz clic en "Descargar" y la canción se agregará a tu biblioteca
+
+### Cola de Descargas
+
+- Las descargas se procesan en segundo plano
+- Puedes ver el progreso en la cola de descargas (esquina inferior derecha)
+- Minimiza la cola para seguir usando la aplicación
+- Las canciones descargadas aparecerán automáticamente en "Mis Canciones"
+
 ### Escuchar en SA-MP
 
 En SA-MP, usa el comando para reproducir audio con tu URL de stream:
@@ -235,6 +263,80 @@ Response:
 {"success": true, "estado": {...}}
 ```
 
+### Importar Playlist de Spotify
+```
+POST /api/<usuario>/spotify/import
+Content-Type: application/json
+
+Body: {"url": "https://open.spotify.com/playlist/..."}
+
+Response:
+{
+  "success": true,
+  "playlist_name": "Mi Playlist",
+  "songs": [
+    {
+      "name": "Nombre de la canción",
+      "artist": "Artista",
+      "album": "Álbum",
+      "duration": "3:45",
+      "search_query": "Nombre Artista"
+    }
+  ]
+}
+```
+
+### Buscar en YouTube
+```
+POST /api/<usuario>/youtube/search
+Content-Type: application/json
+
+Body: {"query": "nombre de la canción"}
+
+Response:
+{
+  "success": true,
+  "results": [
+    {
+      "id": "video_id",
+      "title": "Título del video",
+      "url": "https://www.youtube.com/watch?v=...",
+      "duration": "3:45",
+      "views": 1000000,
+      "thumbnail": "https://..."
+    }
+  ]
+}
+```
+
+### Descargar desde YouTube
+```
+POST /api/<usuario>/youtube/download
+Content-Type: application/json
+
+Body: {"url": "https://www.youtube.com/watch?v=..."}
+
+Response:
+{
+  "success": true,
+  "download_id": "usuario_1234567890",
+  "message": "Descarga iniciada"
+}
+```
+
+### Estado de Descarga
+```
+GET /api/<usuario>/download/status/<download_id>
+
+Response:
+{
+  "status": "downloading" | "completed" | "error",
+  "progress": 75,
+  "filename": "nombre.mp3",
+  "error": null
+}
+```
+
 ## ⚙️ Configuración
 
 Edita `config.py` para personalizar:
@@ -244,6 +346,8 @@ Edita `config.py` para personalizar:
 - `ICECAST_HOST`: Host de Icecast (default: localhost)
 - `ICECAST_PORT`: Puerto de Icecast (default: 8000)
 - `ICECAST_PASSWORD`: Contraseña de Icecast (default: hackme)
+- `SPOTIFY_CLIENT_ID`: ID de cliente de Spotify API
+- `SPOTIFY_CLIENT_SECRET`: Secret de cliente de Spotify API
 
 ## 🔒 Seguridad
 
@@ -255,12 +359,24 @@ Edita `config.py` para personalizar:
 4. **Limitar tamaño de archivos** según tus recursos
 5. **Configurar firewall** adecuadamente
 6. **Ejecutar servicios con usuarios no privilegiados**
+7. **Las descargas de YouTube son solo para uso personal** - Respeta los derechos de autor
 
 ## 🐛 Solución de Problemas
 
 ### El servidor Flask no inicia
 - Verifica que el puerto 5000 esté disponible
 - Revisa los permisos de las carpetas `uploads/` y `playlists/`
+
+### No se pueden descargar videos de YouTube
+- Verifica que FFmpeg esté instalado: `ffmpeg -version`
+- Instala FFmpeg si es necesario:
+  - Ubuntu/Debian: `sudo apt install ffmpeg`
+  - macOS: `brew install ffmpeg`
+  - Windows: Descarga desde https://ffmpeg.org/
+
+### Error al importar de Spotify
+- Verifica que las credenciales en `config.py` sean correctas
+- Asegúrate de que la URL de la playlist sea pública
 
 ### Icecast no se conecta
 - Verifica que Icecast esté ejecutándose: `sudo systemctl status icecast2`
