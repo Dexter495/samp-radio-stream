@@ -1211,8 +1211,8 @@ function showSpotifySongsModal(playlistName, songs) {
     playlistNameEl.textContent = playlistName;
     
     songsList.innerHTML = songs.map((song, index) => `
-        <div class="spotify-song-item" onclick="toggleSpotifySongSelection(${index})">
-            <input type="checkbox" class="spotify-song-checkbox" data-index="${index}" onclick="event.stopPropagation();">
+        <div class="spotify-song-item" data-index="${index}">
+            <input type="checkbox" class="spotify-song-checkbox" data-index="${index}">
             <div class="spotify-song-info">
                 <div class="spotify-song-name">${escapeHtml(song.name)}</div>
                 <div class="spotify-song-artist">${escapeHtml(song.artist)}</div>
@@ -1223,6 +1223,25 @@ function showSpotifySongsModal(playlistName, songs) {
             </div>
         </div>
     `).join('');
+    
+    // Add event listeners using event delegation
+    songsList.addEventListener('click', (e) => {
+        const item = e.target.closest('.spotify-song-item');
+        if (item && !e.target.classList.contains('spotify-song-checkbox')) {
+            const checkbox = item.querySelector('.spotify-song-checkbox');
+            if (checkbox) {
+                checkbox.checked = !checkbox.checked;
+                updateSpotifySongItemStyle(parseInt(item.dataset.index));
+            }
+        }
+    });
+    
+    // Add change listeners for checkboxes
+    songsList.querySelectorAll('.spotify-song-checkbox').forEach(checkbox => {
+        checkbox.addEventListener('change', (e) => {
+            updateSpotifySongItemStyle(parseInt(e.target.dataset.index));
+        });
+    });
     
     openModal(spotifySongsModal);
 }
@@ -1343,8 +1362,8 @@ async function searchYouTube() {
 function showYoutubeResultsModal(results) {
     const resultsList = document.getElementById('youtubeResultsList');
     
-    resultsList.innerHTML = results.map(video => `
-        <div class="youtube-result-item">
+    resultsList.innerHTML = results.map((video, index) => `
+        <div class="youtube-result-item" data-video-index="${index}">
             <img src="${video.thumbnail || 'https://via.placeholder.com/120x90?text=No+Image'}" 
                  alt="${escapeHtml(video.title)}" 
                  class="youtube-thumbnail">
@@ -1354,12 +1373,22 @@ function showYoutubeResultsModal(results) {
                     <span><i class="fas fa-clock"></i> ${video.duration}</span>
                     <span><i class="fas fa-eye"></i> ${formatViews(video.views)} vistas</span>
                 </div>
-                <button class="youtube-download-btn" onclick="downloadFromYouTube('${escapeHtml(video.url)}', '${escapeHtml(video.title)}')">
+                <button class="youtube-download-btn" data-url="${escapeHtml(video.url)}" data-title="${escapeHtml(video.title)}">
                     <i class="fas fa-download"></i> Descargar
                 </button>
             </div>
         </div>
     `).join('');
+    
+    // Add event listeners using event delegation
+    resultsList.addEventListener('click', (e) => {
+        const btn = e.target.closest('.youtube-download-btn');
+        if (btn) {
+            const url = btn.dataset.url;
+            const title = btn.dataset.title;
+            downloadFromYouTube(url, title);
+        }
+    });
     
     openModal(youtubeResultsModal);
 }
@@ -1414,7 +1443,8 @@ async function monitorDownload(downloadId) {
                 updateDownloadStatus(downloadId, status);
                 
                 if (status.status === 'downloading') {
-                    setTimeout(checkStatus, 1000);
+                    // Poll every 2 seconds to reduce server load
+                    setTimeout(checkStatus, 2000);
                 } else if (status.status === 'completed') {
                     // Recargar lista de canciones
                     setTimeout(loadSongs, 1000);

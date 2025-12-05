@@ -23,6 +23,9 @@ LIQUIDSOAP_HOST = 'localhost'
 LIQUIDSOAP_TELNET_PORT = 1234
 
 # Configuración de Spotify API
+# IMPORTANTE: En producción, usar variables de entorno:
+# SPOTIFY_CLIENT_ID = os.environ.get('SPOTIFY_CLIENT_ID', 'default_value')
+# SPOTIFY_CLIENT_SECRET = os.environ.get('SPOTIFY_CLIENT_SECRET', 'default_value')
 SPOTIFY_CLIENT_ID = "30ef581b29de42cd9e237d8387687544"
 SPOTIFY_CLIENT_SECRET = "39b32562a3024a1c83dea5e8a56c63ba"
 

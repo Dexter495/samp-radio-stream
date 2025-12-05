@@ -27,6 +27,9 @@ app.config['SECRET_KEY'] = secrets.token_hex(32)
 # Inicializar base de datos al iniciar la aplicación
 database.init_db()
 
+# Thread-safe lock para proteger download_status
+download_status_lock = threading.Lock()
+
 
 def admin_required(f):
     """Decorador para proteger rutas de administrador"""
@@ -763,24 +766,36 @@ def youtube_search(usuario):
 
 
 def download_youtube_audio(video_url, output_path, usuario, download_id):
-    """Función para descargar audio de YouTube en segundo plano"""
+    """
+    Descarga audio de YouTube y lo convierte a MP3.
+    
+    Args:
+        video_url (str): URL del video de YouTube
+        output_path (str): Ruta donde guardar el archivo
+        usuario (str): Nombre de usuario
+        download_id (str): ID único de la descarga
+    """
     global download_status
+    global download_status_lock
     
     try:
-        download_status[download_id] = {
-            'status': 'downloading',
-            'progress': 0,
-            'filename': '',
-            'error': None
-        }
+        with download_status_lock:
+            download_status[download_id] = {
+                'status': 'downloading',
+                'progress': 0,
+                'filename': '',
+                'error': None
+            }
         
         def progress_hook(d):
             if d['status'] == 'downloading':
                 if 'downloaded_bytes' in d and 'total_bytes' in d:
                     progress = int((d['downloaded_bytes'] / d['total_bytes']) * 100)
-                    download_status[download_id]['progress'] = progress
+                    with download_status_lock:
+                        download_status[download_id]['progress'] = progress
             elif d['status'] == 'finished':
-                download_status[download_id]['progress'] = 100
+                with download_status_lock:
+                    download_status[download_id]['progress'] = 100
         
         ydl_opts = {
             'format': 'bestaudio/best',
@@ -804,23 +819,25 @@ def download_youtube_audio(video_url, output_path, usuario, download_id):
             # Obtener solo el nombre del archivo
             final_filename = os.path.basename(filename_mp3)
             
-            download_status[download_id] = {
-                'status': 'completed',
-                'progress': 100,
-                'filename': final_filename,
-                'error': None
-            }
+            with download_status_lock:
+                download_status[download_id] = {
+                    'status': 'completed',
+                    'progress': 100,
+                    'filename': final_filename,
+                    'error': None
+                }
             
             # Actualizar playlist
             update_playlist(usuario)
     
     except Exception as e:
-        download_status[download_id] = {
-            'status': 'error',
-            'progress': 0,
-            'filename': '',
-            'error': str(e)
-        }
+        with download_status_lock:
+            download_status[download_id] = {
+                'status': 'error',
+                'progress': 0,
+                'filename': '',
+                'error': str(e)
+            }
 
 
 @app.route('/api/<usuario>/youtube/download', methods=['POST'])
@@ -859,10 +876,11 @@ def youtube_download(usuario):
 @app.route('/api/<usuario>/download/status/<download_id>', methods=['GET'])
 def get_download_status(usuario, download_id):
     """Obtener el estado de una descarga"""
-    if download_id in download_status:
-        return jsonify(download_status[download_id])
-    else:
-        return jsonify({'error': 'Descarga no encontrada'}), 404
+    with download_status_lock:
+        if download_id in download_status:
+            return jsonify(download_status[download_id])
+        else:
+            return jsonify({'error': 'Descarga no encontrada'}), 404
 
 
 if __name__ == '__main__':
