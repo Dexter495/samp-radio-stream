@@ -22,6 +22,10 @@ ICECAST_ADMIN_PASSWORD = 'hackme'
 LIQUIDSOAP_HOST = 'localhost'
 LIQUIDSOAP_TELNET_PORT = 1234
 
+# Configuración de Spotify API
+SPOTIFY_CLIENT_ID = "30ef581b29de42cd9e237d8387687544"
+SPOTIFY_CLIENT_SECRET = "39b32562a3024a1c83dea5e8a56c63ba"
+
 # Crear directorios si no existen
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 os.makedirs(PLAYLIST_FOLDER, exist_ok=True)

@@ -1403,3 +1403,505 @@ footer {
         max-height: 300px;
     }
 }
+
+/* ========================================
+   IMPORT SECTION STYLES
+   ======================================== */
+.import-section {
+    background: var(--bg-card);
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 20px;
+    animation: slideUp 0.5s ease-out;
+}
+
+.import-tabs {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+    border-bottom: 2px solid var(--bg-hover);
+}
+
+.import-tab {
+    background: transparent;
+    color: var(--text-secondary);
+    border: none;
+    padding: 12px 24px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    position: relative;
+    border-radius: 8px 8px 0 0;
+}
+
+.import-tab:hover {
+    color: var(--text-primary);
+    background: var(--bg-hover);
+}
+
+.import-tab.active {
+    color: var(--text-primary);
+    background: var(--bg-hover);
+}
+
+.import-tab.active::after {
+    content: '';
+    position: absolute;
+    bottom: -2px;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: var(--spotify-green);
+}
+
+.import-tab i {
+    margin-right: 8px;
+}
+
+.import-tab-content {
+    display: none;
+}
+
+.import-tab-content.active {
+    display: block;
+    animation: fadeIn 0.3s ease-in;
+}
+
+.import-input-group {
+    margin-bottom: 15px;
+}
+
+.import-input-group label {
+    display: block;
+    color: var(--text-primary);
+    font-weight: 600;
+    margin-bottom: 10px;
+    font-size: 14px;
+}
+
+.import-input-group label i {
+    margin-right: 8px;
+    color: var(--spotify-green);
+}
+
+.import-input-wrapper {
+    display: flex;
+    gap: 10px;
+    align-items: stretch;
+}
+
+.import-input {
+    flex: 1;
+    background: var(--bg-secondary);
+    border: 2px solid var(--bg-hover);
+    color: var(--text-primary);
+    padding: 12px 16px;
+    border-radius: 6px;
+    font-size: 14px;
+    transition: all 0.3s ease;
+}
+
+.import-input:focus {
+    outline: none;
+    border-color: var(--spotify-green);
+    box-shadow: 0 0 0 3px rgba(29, 185, 84, 0.1);
+}
+
+.import-input::placeholder {
+    color: var(--text-muted);
+}
+
+.import-status {
+    margin-top: 15px;
+    padding: 12px;
+    border-radius: 6px;
+    display: none;
+}
+
+.import-status.success {
+    display: block;
+    background: rgba(29, 185, 84, 0.1);
+    border: 1px solid var(--spotify-green);
+    color: var(--spotify-green);
+}
+
+.import-status.error {
+    display: block;
+    background: rgba(231, 76, 60, 0.1);
+    border: 1px solid #e74c3c;
+    color: #e74c3c;
+}
+
+.import-status.info {
+    display: block;
+    background: rgba(52, 152, 219, 0.1);
+    border: 1px solid #3498db;
+    color: #3498db;
+}
+
+/* ========================================
+   SPOTIFY SONGS MODAL
+   ======================================== */
+.modal-large {
+    max-width: 800px;
+    max-height: 80vh;
+}
+
+.modal-large .modal-body {
+    max-height: calc(80vh - 120px);
+    overflow-y: auto;
+}
+
+.modal-actions-top {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 15px;
+}
+
+.spotify-songs-list {
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.spotify-song-item {
+    background: var(--bg-secondary);
+    border: 2px solid var(--bg-hover);
+    border-radius: 8px;
+    padding: 15px;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.spotify-song-item:hover {
+    border-color: var(--spotify-green);
+    transform: translateX(5px);
+}
+
+.spotify-song-item.selected {
+    border-color: var(--spotify-green);
+    background: rgba(29, 185, 84, 0.1);
+}
+
+.spotify-song-checkbox {
+    width: 20px;
+    height: 20px;
+    cursor: pointer;
+    accent-color: var(--spotify-green);
+}
+
+.spotify-song-info {
+    flex: 1;
+}
+
+.spotify-song-name {
+    color: var(--text-primary);
+    font-weight: 600;
+    font-size: 16px;
+    margin-bottom: 5px;
+}
+
+.spotify-song-artist {
+    color: var(--text-secondary);
+    font-size: 14px;
+    margin-bottom: 3px;
+}
+
+.spotify-song-details {
+    color: var(--text-muted);
+    font-size: 12px;
+    display: flex;
+    gap: 15px;
+}
+
+.spotify-song-download {
+    background: var(--spotify-green);
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    white-space: nowrap;
+}
+
+.spotify-song-download:hover {
+    background: var(--spotify-green-hover);
+    transform: scale(1.05);
+}
+
+.spotify-song-download:disabled {
+    background: var(--bg-hover);
+    color: var(--text-muted);
+    cursor: not-allowed;
+    transform: none;
+}
+
+/* ========================================
+   YOUTUBE RESULTS MODAL
+   ======================================== */
+.youtube-results-list {
+    max-height: 450px;
+    overflow-y: auto;
+}
+
+.youtube-result-item {
+    background: var(--bg-secondary);
+    border: 2px solid var(--bg-hover);
+    border-radius: 8px;
+    padding: 15px;
+    margin-bottom: 10px;
+    display: flex;
+    gap: 15px;
+    transition: all 0.3s ease;
+}
+
+.youtube-result-item:hover {
+    border-color: #ff0000;
+    transform: translateX(5px);
+}
+
+.youtube-thumbnail {
+    width: 120px;
+    height: 90px;
+    object-fit: cover;
+    border-radius: 6px;
+    flex-shrink: 0;
+}
+
+.youtube-info {
+    flex: 1;
+}
+
+.youtube-title {
+    color: var(--text-primary);
+    font-weight: 600;
+    font-size: 15px;
+    margin-bottom: 8px;
+    line-height: 1.4;
+}
+
+.youtube-meta {
+    color: var(--text-muted);
+    font-size: 13px;
+    display: flex;
+    gap: 15px;
+    margin-bottom: 10px;
+}
+
+.youtube-download-btn {
+    background: #ff0000;
+    color: white;
+    border: none;
+    padding: 8px 20px;
+    border-radius: 20px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.youtube-download-btn:hover {
+    background: #cc0000;
+    transform: scale(1.05);
+}
+
+.youtube-download-btn:disabled {
+    background: var(--bg-hover);
+    color: var(--text-muted);
+    cursor: not-allowed;
+    transform: none;
+}
+
+/* ========================================
+   DOWNLOAD QUEUE
+   ======================================== */
+.download-queue {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    width: 400px;
+    max-width: calc(100vw - 40px);
+    background: var(--bg-card);
+    border: 2px solid var(--bg-hover);
+    border-radius: 12px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+    z-index: 1000;
+    animation: slideUp 0.3s ease-out;
+}
+
+.download-queue-header {
+    background: var(--bg-hover);
+    padding: 15px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-radius: 12px 12px 0 0;
+    cursor: move;
+}
+
+.download-queue-header h4 {
+    color: var(--text-primary);
+    font-size: 16px;
+    font-weight: 600;
+    margin: 0;
+}
+
+.download-queue-header h4 i {
+    color: var(--spotify-green);
+    margin-right: 8px;
+}
+
+#queueCount {
+    color: var(--text-secondary);
+    font-weight: 400;
+    font-size: 14px;
+}
+
+.download-queue-actions {
+    display: flex;
+    gap: 5px;
+}
+
+.queue-action-btn {
+    background: transparent;
+    border: none;
+    color: var(--text-secondary);
+    cursor: pointer;
+    padding: 5px 10px;
+    border-radius: 4px;
+    transition: all 0.3s ease;
+}
+
+.queue-action-btn:hover {
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+}
+
+.download-queue-body {
+    max-height: 300px;
+    overflow-y: auto;
+    padding: 10px;
+}
+
+.download-queue.minimized .download-queue-body {
+    display: none;
+}
+
+.download-item {
+    background: var(--bg-secondary);
+    border: 1px solid var(--bg-hover);
+    border-radius: 8px;
+    padding: 12px;
+    margin-bottom: 10px;
+    animation: slideUp 0.3s ease-out;
+}
+
+.download-item-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 8px;
+}
+
+.download-item-icon {
+    font-size: 20px;
+}
+
+.download-item-icon.downloading {
+    color: #3498db;
+    animation: pulse 1.5s infinite;
+}
+
+.download-item-icon.completed {
+    color: var(--spotify-green);
+}
+
+.download-item-icon.error {
+    color: #e74c3c;
+}
+
+.download-item-name {
+    flex: 1;
+    color: var(--text-primary);
+    font-size: 14px;
+    font-weight: 500;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.download-item-status {
+    color: var(--text-secondary);
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.download-progress-bar {
+    height: 6px;
+    background: var(--bg-hover);
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.download-progress-fill {
+    height: 100%;
+    background: var(--spotify-green);
+    transition: width 0.3s ease;
+    border-radius: 3px;
+}
+
+.download-item.error .download-progress-fill {
+    background: #e74c3c;
+}
+
+.download-error-message {
+    color: #e74c3c;
+    font-size: 12px;
+    margin-top: 5px;
+}
+
+/* ========================================
+   RESPONSIVE DESIGN FOR IMPORT FEATURES
+   ======================================== */
+@media (max-width: 768px) {
+    .import-input-wrapper {
+        flex-direction: column;
+    }
+    
+    .import-tab {
+        padding: 10px 16px;
+        font-size: 14px;
+    }
+    
+    .modal-large {
+        max-width: 95vw;
+    }
+    
+    .spotify-song-item {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .youtube-result-item {
+        flex-direction: column;
+    }
+    
+    .youtube-thumbnail {
+        width: 100%;
+        height: auto;
+    }
+    
+    .download-queue {
+        width: calc(100vw - 40px);
+        right: 20px;
+    }
+    
+    .modal-actions-top {
+        flex-direction: column;
+    }
+}
