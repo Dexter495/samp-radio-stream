@@ -15,6 +15,8 @@ from spotipy.oauth2 import SpotifyClientCredentials
 import yt_dlp
 import threading
 import time
+import subprocess
+import signal
 
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = config.UPLOAD_FOLDER
@@ -29,6 +31,21 @@ database.init_db()
 
 # Thread-safe lock para proteger download_status
 download_status_lock = threading.Lock()
+
+# Diccionario para almacenar procesos de Liquidsoap por usuario
+liquidsoap_processes = {}
+
+# Configuración de rutas de Liquidsoap
+# Nota: Ajustar estas rutas según tu sistema operativo
+if os.name == 'nt':  # Windows
+    LIQUIDSOAP_PATH = "E:/liquidsoap-2.4.0-win64/liquidsoap.exe"
+    LIQUIDSOAP_SCRIPTS_PATH = "E:/liquidsoap-2.4.0-win64"
+else:  # Unix-like (Linux, macOS)
+    LIQUIDSOAP_PATH = "liquidsoap"  # Asume que está en PATH
+    LIQUIDSOAP_SCRIPTS_PATH = os.path.join(config.BASE_DIR, "liquidsoap")
+
+# Crear directorio de scripts de Liquidsoap si no existe
+os.makedirs(LIQUIDSOAP_SCRIPTS_PATH, exist_ok=True)
 
 
 def admin_required(f):
@@ -103,6 +120,79 @@ def update_playlist(usuario):
             f.write(f"{cancion}\n")
     
     return canciones
+
+
+def generate_liquidsoap_config(usuario):
+    """Genera el archivo de configuración de Liquidsoap para el usuario"""
+    user_folder = get_user_folder(usuario).replace("\\", "/")
+    script_path = os.path.join(LIQUIDSOAP_SCRIPTS_PATH, f"radio_{secure_filename(usuario)}.liq")
+    
+    config_content = f'''#!/usr/bin/liquidsoap
+
+music = playlist("{user_folder}")
+
+radio = fallback(track_sensitive=false, [music, blank()])
+
+output.icecast(
+  %ffmpeg(format="mp3", %audio(codec="libmp3lame", b="128k")),
+  host="localhost",
+  port=8000,
+  password="hackme",
+  mount="{secure_filename(usuario)}",
+  radio
+)
+'''
+    
+    with open(script_path, 'w') as f:
+        f.write(config_content)
+    
+    return script_path
+
+
+def start_liquidsoap(usuario):
+    """Inicia el proceso de Liquidsoap para el usuario"""
+    global liquidsoap_processes
+    
+    # Si ya hay un proceso corriendo, detenerlo primero
+    stop_liquidsoap(usuario)
+    
+    # Generar archivo de configuración
+    script_path = generate_liquidsoap_config(usuario)
+    
+    # Configurar el proceso según el sistema operativo
+    if os.name == 'nt':  # Windows
+        # Iniciar Liquidsoap con CREATE_NO_WINDOW para no mostrar consola
+        process = subprocess.Popen(
+            [LIQUIDSOAP_PATH, script_path],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            creationflags=subprocess.CREATE_NO_WINDOW
+        )
+    else:  # Unix-like
+        # Iniciar Liquidsoap normalmente
+        process = subprocess.Popen(
+            [LIQUIDSOAP_PATH, script_path],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE
+        )
+    
+    liquidsoap_processes[usuario] = process
+    return True
+
+
+def stop_liquidsoap(usuario):
+    """Detiene el proceso de Liquidsoap del usuario"""
+    global liquidsoap_processes
+    
+    if usuario in liquidsoap_processes:
+        process = liquidsoap_processes[usuario]
+        try:
+            process.terminate()
+            process.wait(timeout=5)
+        except:
+            process.kill()
+        del liquidsoap_processes[usuario]
+    return True
 
 
 @app.route('/login', methods=['GET', 'POST'])
@@ -315,6 +405,9 @@ def play_song(usuario):
     if not os.path.exists(filepath):
         return jsonify({'error': 'Canción no encontrada'}), 404
     
+    # Iniciar Liquidsoap
+    start_liquidsoap(usuario)
+    
     # Actualizar estado
     state = {
         'playing': True,
@@ -364,6 +457,9 @@ def resume_song(usuario):
 @app.route('/api/<usuario>/stop', methods=['POST'])
 def stop_song(usuario):
     """Detener reproducción"""
+    # Detener Liquidsoap
+    stop_liquidsoap(usuario)
+    
     state = {
         'playing': False,
         'current_song': None,
