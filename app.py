@@ -484,6 +484,168 @@ def stop_song(usuario):
     return jsonify({'success': True, 'estado': state})
 
 
+@app.route('/api/<usuario>/next', methods=['POST'])
+def next_song(usuario):
+    """Saltar a la siguiente canción"""
+    # Get current state
+    state = load_user_state(usuario)
+    
+    if not state.get('playing'):
+        return jsonify({'error': 'No hay reproducción activa'}), 400
+    
+    # Get user songs
+    user_folder = get_user_folder(usuario)
+    canciones = []
+    if os.path.exists(user_folder):
+        for filename in sorted(os.listdir(user_folder)):
+            if allowed_file(filename):
+                canciones.append(filename)
+    
+    if not canciones:
+        return jsonify({'error': 'No hay canciones disponibles'}), 404
+    
+    # Find current song index
+    current_song = state.get('current_song')
+    try:
+        current_index = canciones.index(current_song) if current_song in canciones else -1
+    except ValueError:
+        current_index = -1
+    
+    # Get next song
+    next_index = (current_index + 1) % len(canciones)
+    next_song_name = canciones[next_index]
+    
+    # Update state
+    state['current_song'] = next_song_name
+    state['playing'] = True
+    state['paused'] = False
+    save_user_state(usuario, state)
+    
+    # Generate URL del stream
+    stream_url = f"http://{config.ICECAST_HOST}:{config.ICECAST_PORT}/{secure_filename(usuario)}"
+    
+    return jsonify({
+        'success': True,
+        'song': next_song_name,
+        'stream_url': stream_url,
+        'estado': state
+    })
+
+
+@app.route('/api/<usuario>/previous', methods=['POST'])
+def previous_song(usuario):
+    """Volver a la canción anterior"""
+    # Get current state
+    state = load_user_state(usuario)
+    
+    if not state.get('playing'):
+        return jsonify({'error': 'No hay reproducción activa'}), 400
+    
+    # Get user songs
+    user_folder = get_user_folder(usuario)
+    canciones = []
+    if os.path.exists(user_folder):
+        for filename in sorted(os.listdir(user_folder)):
+            if allowed_file(filename):
+                canciones.append(filename)
+    
+    if not canciones:
+        return jsonify({'error': 'No hay canciones disponibles'}), 404
+    
+    # Find current song index
+    current_song = state.get('current_song')
+    try:
+        current_index = canciones.index(current_song) if current_song in canciones else 0
+    except ValueError:
+        current_index = 0
+    
+    # Get previous song
+    prev_index = (current_index - 1) % len(canciones)
+    prev_song_name = canciones[prev_index]
+    
+    # Update state
+    state['current_song'] = prev_song_name
+    state['playing'] = True
+    state['paused'] = False
+    save_user_state(usuario, state)
+    
+    # Generate URL del stream
+    stream_url = f"http://{config.ICECAST_HOST}:{config.ICECAST_PORT}/{secure_filename(usuario)}"
+    
+    return jsonify({
+        'success': True,
+        'song': prev_song_name,
+        'stream_url': stream_url,
+        'estado': state
+    })
+
+
+@app.route('/api/<usuario>/shuffle', methods=['POST'])
+def toggle_shuffle(usuario):
+    """Toggle shuffle mode"""
+    data = request.get_json() or {}
+    shuffle_enabled = data.get('enabled', False)
+    
+    state = load_user_state(usuario)
+    state['shuffle'] = shuffle_enabled
+    save_user_state(usuario, state)
+    
+    return jsonify({
+        'success': True,
+        'shuffle': shuffle_enabled,
+        'estado': state
+    })
+
+
+@app.route('/api/<usuario>/repeat', methods=['POST'])
+def toggle_repeat(usuario):
+    """Toggle repeat mode (off, playlist, song)"""
+    data = request.get_json() or {}
+    repeat_mode = data.get('mode', 'off')  # off, playlist, song
+    
+    if repeat_mode not in ['off', 'playlist', 'song']:
+        return jsonify({'error': 'Modo de repetición inválido'}), 400
+    
+    state = load_user_state(usuario)
+    state['repeat'] = repeat_mode
+    save_user_state(usuario, state)
+    
+    return jsonify({
+        'success': True,
+        'repeat': repeat_mode,
+        'estado': state
+    })
+
+
+@app.route('/api/<usuario>/current', methods=['GET'])
+def get_current_song(usuario):
+    """Get information about the current song"""
+    state = load_user_state(usuario)
+    
+    if not state.get('playing') or not state.get('current_song'):
+        return jsonify({
+            'playing': False,
+            'current_song': None
+        })
+    
+    current_song = state.get('current_song')
+    user_folder = get_user_folder(usuario)
+    filepath = os.path.join(user_folder, secure_filename(current_song))
+    
+    song_info = {
+        'playing': state.get('playing'),
+        'paused': state.get('paused'),
+        'current_song': current_song,
+        'shuffle': state.get('shuffle', False),
+        'repeat': state.get('repeat', 'off')
+    }
+    
+    if os.path.exists(filepath):
+        song_info['size'] = os.path.getsize(filepath)
+    
+    return jsonify(song_info)
+
+
 # ========================================
 # RUTAS DE PLAYLISTS
 # ========================================

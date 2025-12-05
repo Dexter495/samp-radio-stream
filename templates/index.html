@@ -17,6 +17,12 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
 <body>
+    <!-- Particles Background -->
+    <canvas id="particlesCanvas" class="particles-canvas"></canvas>
+    
+    <!-- Animated Gradient Background -->
+    <div class="animated-gradient"></div>
+    
     <div class="container">
         <header>
             <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;">
@@ -28,6 +34,9 @@
                 </div>
                 {% if usuario %}
                 <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+                    <button id="themeToggle" class="btn-icon theme-toggle" title="Cambiar tema">
+                        <i class="fas fa-sun"></i>
+                    </button>
                     {% if is_admin %}
                     <a href="/admin" style="
                         display: inline-block;
@@ -77,6 +86,17 @@
         </div>
         {% else %}
         <div class="player-section">
+            <!-- Album Artwork Display -->
+            <div class="album-artwork-section">
+                <div class="album-artwork-container">
+                    <div id="albumArtwork" class="album-artwork">
+                        <div class="album-placeholder">
+                            <i class="fas fa-music"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
             <!-- Audio Visualizer -->
             <div class="visualizer-section">
                 <canvas id="audioVisualizer"></canvas>
@@ -150,8 +170,51 @@
 
             <div class="player-controls">
                 <h3><i class="fas fa-gamepad"></i> Control de Reproducción</h3>
+                
+                <!-- Now Playing Info -->
                 <div id="currentSong" class="current-song">
-                    <p>No hay canción seleccionada</p>
+                    <div class="song-info">
+                        <div class="song-title">No hay canción seleccionada</div>
+                        <div class="song-artist"></div>
+                    </div>
+                </div>
+                
+                <!-- Progress Bar -->
+                <div class="progress-bar-container">
+                    <span class="time-current">0:00</span>
+                    <div class="progress-bar">
+                        <div class="progress-bar-fill"></div>
+                    </div>
+                    <span class="time-total">0:00</span>
+                </div>
+                
+                <!-- Main Playback Controls -->
+                <div class="control-buttons main-controls">
+                    <button id="prevBtn" class="btn-control" title="Anterior">
+                        <i class="fas fa-backward-step"></i>
+                    </button>
+                    <button id="pauseBtn" class="btn-control btn-control-play" disabled title="Pausar">
+                        <i class="fas fa-pause"></i>
+                    </button>
+                    <button id="resumeBtn" class="btn-control btn-control-play" disabled title="Continuar">
+                        <i class="fas fa-play"></i>
+                    </button>
+                    <button id="nextBtn" class="btn-control" title="Siguiente">
+                        <i class="fas fa-forward-step"></i>
+                    </button>
+                    <button id="stopBtn" class="btn-control" disabled title="Detener">
+                        <i class="fas fa-stop"></i>
+                    </button>
+                </div>
+                
+                <!-- Shuffle and Repeat Controls -->
+                <div class="playback-modes">
+                    <button id="shuffleBtn" class="btn-mode" title="Modo aleatorio">
+                        <i class="fas fa-shuffle"></i>
+                    </button>
+                    <button id="repeatBtn" class="btn-mode" title="Repetir">
+                        <i class="fas fa-repeat"></i>
+                    </button>
                 </div>
                 
                 <!-- Volume Control -->
@@ -163,11 +226,6 @@
                     <span id="volumeValue" class="volume-value">100%</span>
                 </div>
                 
-                <div class="control-buttons">
-                    <button id="pauseBtn" class="btn btn-warning" disabled><i class="fas fa-pause"></i> Pausar</button>
-                    <button id="resumeBtn" class="btn btn-success" disabled><i class="fas fa-play"></i> Continuar</button>
-                    <button id="stopBtn" class="btn btn-danger" disabled><i class="fas fa-stop"></i> Detener</button>
-                </div>
                 <div id="streamInfo" class="stream-info"></div>
             </div>
 
@@ -324,6 +382,9 @@
     <script>
         const USUARIO = "{{ usuario }}";
     </script>
+    <script src="{{ url_for('static', filename='js/visualizer.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/particles.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/player.js') }}"></script>
     <script src="{{ url_for('static', filename='js/app.js') }}"></script>
     {% endif %}
 </body>
