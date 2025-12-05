@@ -399,102 +399,45 @@ function showStatus(message, isError = false) {
     }, 5000);
 }
 
-function formatFileSize(bytes) {
-    if (bytes < 1024) return bytes + ' B';
-    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(2) + ' KB';
-    return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
-}
-
-// ========================================
-// FILE UPLOAD
-// ========================================
+// Manejar subida de archivo
 async function handleUpload(e) {
     e.preventDefault();
     
-    const files = Array.from(fileInput.files);
-    if (files.length === 0) {
-        showStatus('Por favor selecciona archivos', true);
+    const file = fileInput.files[0];
+    if (!file) {
+        showStatus('Por favor selecciona un archivo', true);
         return;
     }
-    
-    uploadMultipleFiles(files);
-}
 
-async function uploadMultipleFiles(files) {
-    uploadProgress.innerHTML = '';
-    
-    for (let i = 0; i < files.length; i++) {
-        const file = files[i];
-        
-        if (!file.name.toLowerCase().endsWith('.mp3')) {
-            showStatus(`${file.name} no es un archivo MP3`, true);
-            continue;
-        }
-        
-        await uploadSingleFile(file, i);
+    if (!file.name.endsWith('.mp3')) {
+        showStatus('Solo se permiten archivos MP3', true);
+        return;
     }
-    
-    // Clear file input
-    fileInput.value = '';
-    
-    // Reload songs
-    setTimeout(loadSongs, 500);
-}
 
-async function uploadSingleFile(file, index) {
-    const progressId = `upload-${index}-${Date.now()}`;
-    
-    // Create progress element
-    const progressItem = document.createElement('div');
-    progressItem.className = 'upload-progress-item';
-    progressItem.id = progressId;
-    progressItem.innerHTML = `
-        <div class="upload-progress-name">${file.name}</div>
-        <div class="upload-progress-bar">
-            <div class="upload-progress-fill" style="width: 0%"></div>
-        </div>
-        <div class="upload-progress-text">Subiendo...</div>
-    `;
-    uploadProgress.appendChild(progressItem);
-    
     const formData = new FormData();
     formData.append('file', file);
-    
+
     try {
         const response = await fetch(`/api/${USUARIO}/upload`, {
             method: 'POST',
             body: formData
         });
-        
+
         const data = await response.json();
-        
-        const progressFill = progressItem.querySelector('.upload-progress-fill');
-        const progressText = progressItem.querySelector('.upload-progress-text');
-        
+
         if (response.ok) {
-            progressFill.style.width = '100%';
-            progressText.textContent = 'Completado';
-            progressText.style.color = 'var(--spotify-green)';
-            
-            setTimeout(() => {
-                progressItem.remove();
-            }, 2000);
+            showStatus(`<i class="fas fa-check-circle"></i> ${data.filename} subido correctamente`);
+            fileInput.value = '';
+            loadSongs();
         } else {
-            progressFill.style.width = '100%';
-            progressFill.style.background = '#ef5350';
-            progressText.textContent = `Error: ${data.error}`;
-            progressText.style.color = '#ef5350';
+            showStatus(`<i class="fas fa-exclamation-circle"></i> Error: ${data.error}`, true);
         }
     } catch (error) {
-        const progressText = progressItem.querySelector('.upload-progress-text');
-        progressText.textContent = `Error: ${error.message}`;
-        progressText.style.color = '#ef5350';
+        showStatus(`<i class="fas fa-exclamation-circle"></i> Error de conexión: ${error.message}`, true);
     }
 }
 
-// ========================================
-// SONG LIST
-// ========================================
+// Cargar lista de canciones
 async function loadSongs() {
     try {
         const response = await fetch(`/api/${USUARIO}/canciones`);
@@ -502,16 +445,7 @@ async function loadSongs() {
 
         if (response.ok) {
             currentState = data.estado;
-            allSongs = data.canciones;
-            
-            // Apply current search filter if any
-            const query = searchInput.value.trim();
-            if (query) {
-                filterSongs(query);
-            } else {
-                displaySongs(allSongs);
-            }
-            
+            displaySongs(data.canciones);
             updatePlayerState();
         } else {
             songList.innerHTML = '<p class="error">Error al cargar canciones</p>';
@@ -521,8 +455,9 @@ async function loadSongs() {
     }
 }
 
-function displaySongs(canciones, searchQuery = '') {
-    if (canciones.length === 0 && !searchQuery) {
+// Mostrar canciones en la lista
+function displaySongs(canciones) {
+    if (canciones.length === 0) {
         songList.innerHTML = '<p class="loading">No hay canciones. ¡Sube tu primera canción!</p>';
         return;
     }
@@ -538,8 +473,7 @@ function displaySongs(canciones, searchQuery = '') {
 
         const songName = document.createElement('div');
         songName.className = 'song-name';
-        const highlightedName = searchQuery ? highlightText(cancion.nombre, searchQuery) : cancion.nombre;
-        songName.innerHTML = `<i class="fas fa-music"></i> ${highlightedName}`;
+        songName.innerHTML = `<i class="fas fa-music"></i> ${cancion.nombre}`;
 
         const songSize = document.createElement('div');
         songSize.className = 'song-size';
@@ -556,30 +490,12 @@ function displaySongs(canciones, searchQuery = '') {
         playBtn.innerHTML = '<i class="fas fa-play"></i> Reproducir';
         playBtn.onclick = () => playSong(cancion.nombre);
 
-        const addToPlaylistMenu = document.createElement('div');
-        addToPlaylistMenu.className = 'add-to-playlist-menu';
-        
-        const addToPlaylistBtn = document.createElement('button');
-        addToPlaylistBtn.className = 'btn btn-small add-to-playlist-btn';
-        addToPlaylistBtn.innerHTML = '<i class="fas fa-plus"></i> Playlist';
-        addToPlaylistBtn.onclick = (e) => {
-            e.stopPropagation();
-            togglePlaylistDropdown(addToPlaylistMenu, cancion.nombre);
-        };
-        
-        const playlistDropdown = document.createElement('div');
-        playlistDropdown.className = 'playlist-dropdown';
-        
-        addToPlaylistMenu.appendChild(addToPlaylistBtn);
-        addToPlaylistMenu.appendChild(playlistDropdown);
-
         const deleteBtn = document.createElement('button');
         deleteBtn.className = 'btn btn-danger btn-small';
         deleteBtn.innerHTML = '<i class="fas fa-trash"></i> Eliminar';
         deleteBtn.onclick = () => deleteSong(cancion.nombre);
 
         songActions.appendChild(playBtn);
-        songActions.appendChild(addToPlaylistMenu);
         songActions.appendChild(deleteBtn);
 
         songItem.appendChild(songInfo);
@@ -589,50 +505,14 @@ function displaySongs(canciones, searchQuery = '') {
     });
 }
 
-function togglePlaylistDropdown(menuElement, songName) {
-    const dropdown = menuElement.querySelector('.playlist-dropdown');
-    
-    // Close all other dropdowns
-    document.querySelectorAll('.playlist-dropdown').forEach(d => {
-        if (d !== dropdown) d.classList.remove('show');
-    });
-    
-    if (dropdown.classList.contains('show')) {
-        dropdown.classList.remove('show');
-        return;
-    }
-    
-    // Populate dropdown
-    dropdown.innerHTML = '';
-    
-    if (currentPlaylists.length === 0) {
-        dropdown.innerHTML = '<div class="playlist-dropdown-item" style="color: var(--text-muted); cursor: default;">No hay playlists</div>';
-    } else {
-        currentPlaylists.forEach(playlist => {
-            const item = document.createElement('div');
-            item.className = 'playlist-dropdown-item';
-            item.innerHTML = `<i class="fas fa-list"></i> ${playlist.name}`;
-            item.onclick = () => addSongToPlaylist(playlist.id, songName, dropdown);
-            dropdown.appendChild(item);
-        });
-    }
-    
-    dropdown.classList.add('show');
-    
-    // Close dropdown when clicking outside
-    setTimeout(() => {
-        document.addEventListener('click', function closeDropdown(e) {
-            if (!menuElement.contains(e.target)) {
-                dropdown.classList.remove('show');
-                document.removeEventListener('click', closeDropdown);
-            }
-        });
-    }, 0);
+// Formatear tamaño de archivo
+function formatFileSize(bytes) {
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(2) + ' KB';
+    return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
 }
 
-// ========================================
-// PLAYER CONTROLS
-// ========================================
+// Reproducir canción
 async function playSong(nombre) {
     try {
         const response = await fetch(`/api/${USUARIO}/play`, {
@@ -648,7 +528,6 @@ async function playSong(nombre) {
         if (response.ok) {
             currentState = data.estado;
             updatePlayerState();
-            startVisualizer();
             showStatus(`<i class="fas fa-music"></i> Reproduciendo: ${nombre}`);
             
             if (data.stream_url) {
@@ -665,6 +544,7 @@ async function playSong(nombre) {
     }
 }
 
+// Pausar canción
 async function pauseSong() {
     try {
         const response = await fetch(`/api/${USUARIO}/pause`, {
@@ -676,7 +556,6 @@ async function pauseSong() {
         if (response.ok) {
             currentState = data.estado;
             updatePlayerState();
-            stopVisualizer();
             showStatus('<i class="fas fa-pause"></i> Reproducción pausada');
         } else {
             showStatus(`<i class="fas fa-exclamation-circle"></i> Error: ${data.error}`, true);
@@ -686,6 +565,7 @@ async function pauseSong() {
     }
 }
 
+// Continuar canción
 async function resumeSong() {
     try {
         const response = await fetch(`/api/${USUARIO}/resume`, {
@@ -697,7 +577,6 @@ async function resumeSong() {
         if (response.ok) {
             currentState = data.estado;
             updatePlayerState();
-            startVisualizer();
             showStatus('<i class="fas fa-play"></i> Reproducción continuada');
         } else {
             showStatus(`<i class="fas fa-exclamation-circle"></i> Error: ${data.error}`, true);
@@ -707,6 +586,7 @@ async function resumeSong() {
     }
 }
 
+// Detener canción
 async function stopSong() {
     try {
         const response = await fetch(`/api/${USUARIO}/stop`, {
@@ -718,7 +598,6 @@ async function stopSong() {
         if (response.ok) {
             currentState = data.estado;
             updatePlayerState();
-            stopVisualizer();
             showStatus('<i class="fas fa-stop"></i> Reproducción detenida');
             streamInfo.innerHTML = '';
         } else {
@@ -767,12 +646,6 @@ function updatePlayerState() {
         pauseBtn.disabled = currentState.paused;
         resumeBtn.disabled = !currentState.paused;
         stopBtn.disabled = false;
-        
-        if (!currentState.paused) {
-            startVisualizer();
-        } else {
-            stopVisualizer();
-        }
     } else {
         currentSongDiv.innerHTML = '<p>No hay canción seleccionada</p>';
         currentSongDiv.className = 'current-song';
@@ -780,243 +653,5 @@ function updatePlayerState() {
         pauseBtn.disabled = true;
         resumeBtn.disabled = true;
         stopBtn.disabled = true;
-        stopVisualizer();
-    }
-}
-
-// ========================================
-// PLAYLIST MANAGEMENT
-// ========================================
-async function loadPlaylists() {
-    try {
-        const response = await fetch(`/api/${USUARIO}/playlists`);
-        const data = await response.json();
-
-        if (response.ok) {
-            currentPlaylists = data.playlists;
-            displayPlaylists(data.playlists);
-        } else {
-            playlistsList.innerHTML = '<p class="error">Error al cargar playlists</p>';
-        }
-    } catch (error) {
-        playlistsList.innerHTML = '<p class="error">Error de conexión</p>';
-    }
-}
-
-function displayPlaylists(playlists) {
-    if (playlists.length === 0) {
-        playlistsList.innerHTML = '<p class="loading">No hay playlists. ¡Crea tu primera playlist!</p>';
-        return;
-    }
-
-    playlistsList.innerHTML = '';
-
-    playlists.forEach(playlist => {
-        const playlistItem = document.createElement('div');
-        playlistItem.className = 'playlist-item';
-
-        playlistItem.innerHTML = `
-            <div class="playlist-item-header">
-                <div class="playlist-item-name">${playlist.name}</div>
-                <div class="playlist-item-actions">
-                    <button class="view-playlist-btn" title="Ver playlist">
-                        <i class="fas fa-eye"></i>
-                    </button>
-                    <button class="delete-playlist-btn" title="Eliminar playlist">
-                        <i class="fas fa-trash"></i>
-                    </button>
-                </div>
-            </div>
-            <div class="playlist-item-info">
-                <i class="fas fa-music"></i> ${playlist.song_count} canción${playlist.song_count !== 1 ? 'es' : ''}
-            </div>
-        `;
-
-        // View playlist
-        playlistItem.querySelector('.view-playlist-btn').onclick = (e) => {
-            e.stopPropagation();
-            viewPlaylist(playlist.id);
-        };
-
-        // Delete playlist
-        playlistItem.querySelector('.delete-playlist-btn').onclick = (e) => {
-            e.stopPropagation();
-            deletePlaylistConfirm(playlist.id, playlist.name);
-        };
-
-        // Click on item to view
-        playlistItem.onclick = () => viewPlaylist(playlist.id);
-
-        playlistsList.appendChild(playlistItem);
-    });
-}
-
-function openCreatePlaylistModal() {
-    createPlaylistModal.classList.add('show');
-    document.getElementById('playlistName').focus();
-}
-
-function closeCreatePlaylistModal() {
-    createPlaylistModal.classList.remove('show');
-    document.getElementById('playlistName').value = '';
-}
-
-async function handleCreatePlaylist(e) {
-    e.preventDefault();
-    
-    const name = document.getElementById('playlistName').value.trim();
-    
-    if (!name) {
-        showStatus('El nombre de la playlist no puede estar vacío', true);
-        return;
-    }
-    
-    try {
-        const response = await fetch(`/api/${USUARIO}/playlists`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ name })
-        });
-
-        const data = await response.json();
-
-        if (response.ok) {
-            showStatus(`<i class="fas fa-check-circle"></i> Playlist "${name}" creada`);
-            closeCreatePlaylistModal();
-            loadPlaylists();
-        } else {
-            showStatus(`<i class="fas fa-exclamation-circle"></i> Error: ${data.error}`, true);
-        }
-    } catch (error) {
-        showStatus(`<i class="fas fa-exclamation-circle"></i> Error de conexión: ${error.message}`, true);
-    }
-}
-
-async function viewPlaylist(playlistId) {
-    try {
-        const response = await fetch(`/api/${USUARIO}/playlists/${playlistId}`);
-        const data = await response.json();
-
-        if (response.ok) {
-            displayPlaylistDetails(data);
-            playlistDetailsModal.classList.add('show');
-        } else {
-            showStatus(`<i class="fas fa-exclamation-circle"></i> Error al cargar playlist`, true);
-        }
-    } catch (error) {
-        showStatus(`<i class="fas fa-exclamation-circle"></i> Error de conexión: ${error.message}`, true);
-    }
-}
-
-function displayPlaylistDetails(playlist) {
-    document.getElementById('playlistDetailsTitle').innerHTML = 
-        `<i class="fas fa-list"></i> ${playlist.name}`;
-    
-    const songsList = document.getElementById('playlistSongsList');
-    
-    if (playlist.songs.length === 0) {
-        songsList.innerHTML = '<p class="loading">Esta playlist está vacía</p>';
-        return;
-    }
-    
-    songsList.innerHTML = '';
-    
-    playlist.songs.forEach(song => {
-        const songItem = document.createElement('div');
-        songItem.className = 'playlist-song-item';
-        
-        songItem.innerHTML = `
-            <div class="playlist-song-name">
-                <i class="fas fa-music"></i> ${song.song_name}
-            </div>
-            <div class="playlist-song-actions">
-                <button class="remove-from-playlist-btn" title="Quitar de playlist">
-                    <i class="fas fa-times"></i> Quitar
-                </button>
-            </div>
-        `;
-        
-        songItem.querySelector('.remove-from-playlist-btn').onclick = () => {
-            removeSongFromPlaylist(playlist.id, song.song_name);
-        };
-        
-        songsList.appendChild(songItem);
-    });
-}
-
-function closePlaylistDetailsModal() {
-    playlistDetailsModal.classList.remove('show');
-}
-
-async function addSongToPlaylist(playlistId, songName, dropdown) {
-    try {
-        const response = await fetch(`/api/${USUARIO}/playlists/${playlistId}/songs`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ song_name: songName })
-        });
-
-        const data = await response.json();
-
-        if (response.ok) {
-            showStatus(`<i class="fas fa-check-circle"></i> Canción agregada a la playlist`);
-            dropdown.classList.remove('show');
-            loadPlaylists();
-        } else {
-            showStatus(`<i class="fas fa-exclamation-circle"></i> Error: ${data.error}`, true);
-        }
-    } catch (error) {
-        showStatus(`<i class="fas fa-exclamation-circle"></i> Error de conexión: ${error.message}`, true);
-    }
-}
-
-async function removeSongFromPlaylist(playlistId, songName) {
-    try {
-        const response = await fetch(`/api/${USUARIO}/playlists/${playlistId}/songs`, {
-            method: 'DELETE',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ song_name: songName })
-        });
-
-        const data = await response.json();
-
-        if (response.ok) {
-            showStatus(`<i class="fas fa-check-circle"></i> Canción eliminada de la playlist`);
-            viewPlaylist(playlistId); // Refresh the playlist view
-            loadPlaylists(); // Update playlist counts
-        } else {
-            showStatus(`<i class="fas fa-exclamation-circle"></i> Error: ${data.error}`, true);
-        }
-    } catch (error) {
-        showStatus(`<i class="fas fa-exclamation-circle"></i> Error de conexión: ${error.message}`, true);
-    }
-}
-
-async function deletePlaylistConfirm(playlistId, playlistName) {
-    if (!confirm(`¿Estás seguro de que quieres eliminar la playlist "${playlistName}"?`)) {
-        return;
-    }
-    
-    try {
-        const response = await fetch(`/api/${USUARIO}/playlists/${playlistId}`, {
-            method: 'DELETE'
-        });
-
-        const data = await response.json();
-
-        if (response.ok) {
-            showStatus(`<i class="fas fa-trash"></i> Playlist "${playlistName}" eliminada`);
-            loadPlaylists();
-        } else {
-            showStatus(`<i class="fas fa-exclamation-circle"></i> Error: ${data.error}`, true);
-        }
-    } catch (error) {
-        showStatus(`<i class="fas fa-exclamation-circle"></i> Error de conexión: ${error.message}`, true);
     }
 }

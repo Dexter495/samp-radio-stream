@@ -77,10 +77,23 @@
         </div>
         {% else %}
         <div class="player-section">
+            <!-- Audio Visualizer -->
+            <div class="visualizer-section">
+                <canvas id="audioVisualizer"></canvas>
+            </div>
+
             <div class="upload-section">
                 <h3><i class="fas fa-upload"></i> Subir Canción</h3>
+                
+                <!-- Drag & Drop Zone -->
+                <div id="dropZone" class="drop-zone">
+                    <i class="fas fa-cloud-arrow-up"></i>
+                    <p>Arrastra archivos MP3 aquí</p>
+                    <p class="drop-zone-hint">o haz clic para seleccionar</p>
+                </div>
+                
                 <form id="uploadForm" enctype="multipart/form-data">
-                    <input type="file" id="fileInput" accept=".mp3" required>
+                    <input type="file" id="fileInput" accept=".mp3" multiple required style="display: none;">
                     <button type="submit" class="btn btn-primary"><i class="fas fa-cloud-arrow-up"></i> Subir MP3</button>
                 </form>
                 <div class="tip-box">
@@ -88,6 +101,7 @@
                     <p>Te recomendamos usar <a href="https://y2mate.nu/es-ei28/" target="_blank" rel="noopener">y2mate.nu</a> para convertir tus canciones fácilmente.</p>
                 </div>
                 <div id="uploadStatus" class="status-message"></div>
+                <div id="uploadProgress" class="upload-progress"></div>
             </div>
 
             <div class="player-controls">
@@ -95,6 +109,16 @@
                 <div id="currentSong" class="current-song">
                     <p>No hay canción seleccionada</p>
                 </div>
+                
+                <!-- Volume Control -->
+                <div class="volume-control">
+                    <button id="volumeBtn" class="volume-btn">
+                        <i class="fas fa-volume-high"></i>
+                    </button>
+                    <input type="range" id="volumeSlider" min="0" max="100" value="100" class="volume-slider">
+                    <span id="volumeValue" class="volume-value">100%</span>
+                </div>
+                
                 <div class="control-buttons">
                     <button id="pauseBtn" class="btn btn-warning" disabled><i class="fas fa-pause"></i> Pausar</button>
                     <button id="resumeBtn" class="btn btn-success" disabled><i class="fas fa-play"></i> Continuar</button>
@@ -104,10 +128,37 @@
             </div>
 
             <div class="playlist-section">
-                <h3><i class="fas fa-music"></i> Mis Canciones</h3>
-                <button id="refreshBtn" class="btn btn-secondary"><i class="fas fa-rotate"></i> Actualizar</button>
+                <div class="playlist-header">
+                    <h3><i class="fas fa-music"></i> Mis Canciones</h3>
+                    <div class="playlist-actions">
+                        <!-- Search Box -->
+                        <div class="search-box">
+                            <i class="fas fa-search"></i>
+                            <input type="text" id="searchInput" placeholder="Buscar canciones..." autocomplete="off">
+                            <button id="clearSearch" class="clear-search-btn" style="display: none;">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                        <button id="refreshBtn" class="btn btn-secondary"><i class="fas fa-rotate"></i> Actualizar</button>
+                    </div>
+                </div>
                 <div id="songList" class="song-list">
                     <p class="loading">Cargando canciones...</p>
+                </div>
+                <div id="noResults" class="no-results" style="display: none;">
+                    <i class="fas fa-search"></i>
+                    <p>No se encontraron canciones</p>
+                </div>
+            </div>
+
+            <!-- Playlists Section -->
+            <div class="playlists-section">
+                <div class="playlists-header">
+                    <h3><i class="fas fa-list"></i> Mis Playlists</h3>
+                    <button id="createPlaylistBtn" class="btn btn-primary"><i class="fas fa-plus"></i> Nueva Playlist</button>
+                </div>
+                <div id="playlistsList" class="playlists-list">
+                    <p class="loading">Cargando playlists...</p>
                 </div>
             </div>
         </div>
@@ -125,6 +176,43 @@
         <footer>
             <p>Starlight Radio Streaming System | Máximo 30 usuarios | Solo MP3</p>
         </footer>
+    </div>
+
+    <!-- Create Playlist Modal -->
+    <div id="createPlaylistModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fas fa-list"></i> Crear Nueva Playlist</h3>
+                <button class="modal-close" id="closePlaylistModal"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="modal-body">
+                <form id="createPlaylistForm">
+                    <div class="form-group">
+                        <label for="playlistName">Nombre de la Playlist</label>
+                        <input type="text" id="playlistName" placeholder="Mi playlist favorita" maxlength="100" required>
+                    </div>
+                    <div class="modal-actions">
+                        <button type="button" class="btn btn-secondary" id="cancelPlaylistBtn">Cancelar</button>
+                        <button type="submit" class="btn btn-primary"><i class="fas fa-check"></i> Crear</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Playlist Details Modal -->
+    <div id="playlistDetailsModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="playlistDetailsTitle"><i class="fas fa-list"></i> Playlist</h3>
+                <button class="modal-close" id="closePlaylistDetailsModal"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="modal-body">
+                <div id="playlistSongsList" class="playlist-songs-list">
+                    <p class="loading">Cargando canciones...</p>
+                </div>
+            </div>
+        </div>
     </div>
 
     {% if usuario %}

@@ -30,6 +30,29 @@ def init_db():
     if 'is_admin' not in columns:
         c.execute('ALTER TABLE users ADD COLUMN is_admin INTEGER DEFAULT 0')
     
+    # Crear tabla de playlists
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS playlists (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT NOT NULL,
+            name TEXT NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE(username, name)
+        )
+    ''')
+    
+    # Crear tabla de canciones de playlist
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS playlist_songs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            playlist_id INTEGER NOT NULL,
+            song_name TEXT NOT NULL,
+            position INTEGER DEFAULT 0,
+            added_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (playlist_id) REFERENCES playlists(id) ON DELETE CASCADE
+        )
+    ''')
+    
     # Crear usuario admin por defecto: Dylan_Charris / 123456789
     default_password = generate_password_hash('123456789', method='pbkdf2:sha256')
     try:
@@ -148,3 +171,137 @@ def get_user_count():
     count = c.fetchone()[0]
     conn.close()
     return count
+
+# ========================================
+# FUNCIONES DE PLAYLISTS
+# ========================================
+
+def create_playlist(username, playlist_name):
+    """Crear una nueva playlist para un usuario"""
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    try:
+        c.execute('INSERT INTO playlists (username, name) VALUES (?, ?)', 
+                  (username, playlist_name))
+        playlist_id = c.lastrowid
+        conn.commit()
+        conn.close()
+        return playlist_id
+    except sqlite3.IntegrityError:
+        conn.close()
+        return None
+
+def get_user_playlists(username):
+    """Obtener todas las playlists de un usuario"""
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    c.execute('''
+        SELECT p.id, p.name, p.created_at, COUNT(ps.id) as song_count
+        FROM playlists p
+        LEFT JOIN playlist_songs ps ON p.id = ps.playlist_id
+        WHERE p.username = ?
+        GROUP BY p.id, p.name, p.created_at
+        ORDER BY p.created_at DESC
+    ''', (username,))
+    
+    playlists = []
+    for row in c.fetchall():
+        playlists.append({
+            'id': row[0],
+            'name': row[1],
+            'created_at': row[2],
+            'song_count': row[3]
+        })
+    conn.close()
+    return playlists
+
+def get_playlist(playlist_id):
+    """Obtener detalles de una playlist específica"""
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    c.execute('SELECT id, username, name, created_at FROM playlists WHERE id = ?', 
+              (playlist_id,))
+    result = c.fetchone()
+    
+    if not result:
+        conn.close()
+        return None
+    
+    playlist = {
+        'id': result[0],
+        'username': result[1],
+        'name': result[2],
+        'created_at': result[3]
+    }
+    
+    # Obtener canciones de la playlist
+    c.execute('''
+        SELECT id, song_name, position, added_at 
+        FROM playlist_songs 
+        WHERE playlist_id = ? 
+        ORDER BY position
+    ''', (playlist_id,))
+    
+    songs = []
+    for row in c.fetchall():
+        songs.append({
+            'id': row[0],
+            'song_name': row[1],
+            'position': row[2],
+            'added_at': row[3]
+        })
+    
+    playlist['songs'] = songs
+    conn.close()
+    return playlist
+
+def add_song_to_playlist(playlist_id, song_name):
+    """Agregar una canción a una playlist"""
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    
+    # Obtener la posición más alta actual
+    c.execute('SELECT MAX(position) FROM playlist_songs WHERE playlist_id = ?', 
+              (playlist_id,))
+    max_pos = c.fetchone()[0]
+    new_position = (max_pos + 1) if max_pos is not None else 0
+    
+    try:
+        c.execute('''
+            INSERT INTO playlist_songs (playlist_id, song_name, position) 
+            VALUES (?, ?, ?)
+        ''', (playlist_id, song_name, new_position))
+        conn.commit()
+        conn.close()
+        return True
+    except Exception:
+        conn.close()
+        return False
+
+def remove_song_from_playlist(playlist_id, song_name):
+    """Eliminar una canción de una playlist"""
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    c.execute('DELETE FROM playlist_songs WHERE playlist_id = ? AND song_name = ?', 
+              (playlist_id, song_name))
+    conn.commit()
+    conn.close()
+    return True
+
+def delete_playlist(playlist_id):
+    """Eliminar una playlist"""
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    c.execute('DELETE FROM playlists WHERE id = ?', (playlist_id,))
+    conn.commit()
+    conn.close()
+    return True
+
+def verify_playlist_owner(playlist_id, username):
+    """Verificar que una playlist pertenece a un usuario"""
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    c.execute('SELECT username FROM playlists WHERE id = ?', (playlist_id,))
+    result = c.fetchone()
+    conn.close()
+    return result is not None and result[0] == username
