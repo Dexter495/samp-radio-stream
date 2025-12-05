@@ -367,6 +367,97 @@ def stop_song(usuario):
 
 
 # ========================================
+# RUTAS DE PLAYLISTS
+# ========================================
+
+@app.route('/api/<usuario>/playlists', methods=['GET'])
+def get_playlists(usuario):
+    """Obtener playlists del usuario"""
+    playlists = database.get_user_playlists(usuario)
+    return jsonify({'playlists': playlists})
+
+
+@app.route('/api/<usuario>/playlists', methods=['POST'])
+def create_playlist(usuario):
+    """Crear nueva playlist"""
+    data = request.get_json()
+    if not data or 'name' not in data:
+        return jsonify({'error': 'Se requiere nombre de playlist'}), 400
+    
+    name = data['name'].strip()
+    if not name:
+        return jsonify({'error': 'El nombre no puede estar vacío'}), 400
+    
+    if len(name) > 100:
+        return jsonify({'error': 'El nombre es demasiado largo'}), 400
+    
+    playlist_id = database.create_playlist(usuario, name)
+    if playlist_id:
+        return jsonify({'success': True, 'playlist_id': playlist_id, 'name': name})
+    else:
+        return jsonify({'error': 'Ya existe una playlist con ese nombre'}), 400
+
+
+@app.route('/api/<usuario>/playlists/<int:playlist_id>', methods=['GET'])
+def get_playlist(usuario, playlist_id):
+    """Obtener detalles de una playlist"""
+    # Verificar que la playlist pertenezca al usuario
+    if not database.verify_playlist_owner(playlist_id, usuario):
+        return jsonify({'error': 'Playlist no encontrada'}), 404
+    
+    playlist = database.get_playlist(playlist_id)
+    if playlist:
+        return jsonify(playlist)
+    else:
+        return jsonify({'error': 'Playlist no encontrada'}), 404
+
+
+@app.route('/api/<usuario>/playlists/<int:playlist_id>', methods=['DELETE'])
+def delete_playlist(usuario, playlist_id):
+    """Eliminar playlist"""
+    # Verificar que la playlist pertenezca al usuario
+    if not database.verify_playlist_owner(playlist_id, usuario):
+        return jsonify({'error': 'Playlist no encontrada'}), 404
+    
+    database.delete_playlist(playlist_id)
+    return jsonify({'success': True})
+
+
+@app.route('/api/<usuario>/playlists/<int:playlist_id>/songs', methods=['POST'])
+def add_song_to_playlist(usuario, playlist_id):
+    """Agregar canción a playlist"""
+    # Verificar que la playlist pertenezca al usuario
+    if not database.verify_playlist_owner(playlist_id, usuario):
+        return jsonify({'error': 'Playlist no encontrada'}), 404
+    
+    data = request.get_json()
+    if not data or 'song_name' not in data:
+        return jsonify({'error': 'Se requiere nombre de canción'}), 400
+    
+    song_name = data['song_name']
+    if database.add_song_to_playlist(playlist_id, song_name):
+        return jsonify({'success': True})
+    else:
+        return jsonify({'error': 'Error al agregar canción'}), 400
+
+
+@app.route('/api/<usuario>/playlists/<int:playlist_id>/songs', methods=['DELETE'])
+def remove_song_from_playlist(usuario, playlist_id):
+    """Eliminar canción de playlist"""
+    # Verificar que la playlist pertenezca al usuario
+    if not database.verify_playlist_owner(playlist_id, usuario):
+        return jsonify({'error': 'Playlist no encontrada'}), 404
+    
+    data = request.get_json()
+    if not data or 'song_name' not in data:
+        return jsonify({'error': 'Se requiere nombre de canción'}), 400
+    
+    song_name = data['song_name']
+    database.remove_song_from_playlist(playlist_id, song_name)
+    return jsonify({'success': True})
+
+
+# ========================================
 # RUTAS DEL PANEL DE ADMINISTRACIÓN
 # ========================================
 
