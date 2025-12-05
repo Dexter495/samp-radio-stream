@@ -124,7 +124,7 @@ function initializeEventListeners() {
     playlistDetailsModal.addEventListener('click', (e) => {
         if (e.target === playlistDetailsModal) closePlaylistDetailsModal();
     });
-});
+}
 
 // ========================================
 // AUDIO VISUALIZER
