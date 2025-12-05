@@ -10,6 +10,11 @@ import json
 import secrets
 import database
 from functools import wraps
+import spotipy
+from spotipy.oauth2 import SpotifyClientCredentials
+import yt_dlp
+import threading
+import time
 
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = config.UPLOAD_FOLDER
@@ -21,6 +26,9 @@ app.config['SECRET_KEY'] = secrets.token_hex(32)
 
 # Inicializar base de datos al iniciar la aplicación
 database.init_db()
+
+# Thread-safe lock para proteger download_status
+download_status_lock = threading.Lock()
 
 
 def admin_required(f):
@@ -627,6 +635,252 @@ def admin_stats():
     }
     
     return render_template('admin/stats.html', stats=stats, user_stats=user_stats)
+
+
+# ========================================
+# RUTAS DE IMPORTACIÓN (SPOTIFY & YOUTUBE)
+# ========================================
+
+# Estado global de descargas - protegido por download_status_lock
+download_status = {}
+
+def init_spotify():
+    """Inicializa el cliente de Spotify"""
+    try:
+        client_credentials_manager = SpotifyClientCredentials(
+            client_id=config.SPOTIFY_CLIENT_ID,
+            client_secret=config.SPOTIFY_CLIENT_SECRET
+        )
+        return spotipy.Spotify(client_credentials_manager=client_credentials_manager)
+    except Exception as e:
+        print(f"Error initializing Spotify client: {e}")
+        return None
+
+
+@app.route('/api/<usuario>/spotify/import', methods=['POST'])
+def spotify_import(usuario):
+    """Importar canciones desde una playlist de Spotify"""
+    data = request.get_json()
+    if not data or 'url' not in data:
+        return jsonify({'error': 'Se requiere URL de playlist'}), 400
+    
+    playlist_url = data['url']
+    
+    try:
+        sp = init_spotify()
+        if not sp:
+            return jsonify({'error': 'Error al conectar con Spotify'}), 500
+        
+        # Extraer playlist ID de la URL
+        if 'playlist/' in playlist_url:
+            playlist_id = playlist_url.split('playlist/')[-1].split('?')[0]
+        else:
+            return jsonify({'error': 'URL de playlist inválida'}), 400
+        
+        # Obtener información de la playlist
+        playlist = sp.playlist(playlist_id)
+        tracks = []
+        
+        # Obtener todas las canciones (manejar paginación)
+        results = sp.playlist_tracks(playlist_id)
+        tracks.extend(results['items'])
+        
+        while results['next']:
+            results = sp.next(results)
+            tracks.extend(results['items'])
+        
+        # Formatear la información de las canciones
+        songs = []
+        for item in tracks:
+            if item['track'] and item['track']['name']:
+                track = item['track']
+                artists = ', '.join([artist['name'] for artist in track['artists']])
+                duration_ms = track['duration_ms']
+                duration_str = f"{duration_ms // 60000}:{(duration_ms % 60000) // 1000:02d}"
+                
+                songs.append({
+                    'name': track['name'],
+                    'artist': artists,
+                    'album': track['album']['name'] if track['album'] else '',
+                    'duration': duration_str,
+                    'search_query': f"{track['name']} {artists}"
+                })
+        
+        return jsonify({
+            'success': True,
+            'playlist_name': playlist['name'],
+            'songs': songs
+        })
+    
+    except Exception as e:
+        return jsonify({'error': f'Error al importar playlist: {str(e)}'}), 500
+
+
+@app.route('/api/<usuario>/youtube/search', methods=['POST'])
+def youtube_search(usuario):
+    """Buscar una canción en YouTube"""
+    data = request.get_json()
+    if not data or 'query' not in data:
+        return jsonify({'error': 'Se requiere query de búsqueda'}), 400
+    
+    search_query = data['query']
+    
+    try:
+        ydl_opts = {
+            'format': 'bestaudio/best',
+            'noplaylist': True,
+            'quiet': True,
+            'no_warnings': True,
+            'extract_flat': True,
+            'default_search': 'ytsearch5'
+        }
+        
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            search_results = ydl.extract_info(f"ytsearch5:{search_query}", download=False)
+            
+            if not search_results or 'entries' not in search_results:
+                return jsonify({'error': 'No se encontraron resultados'}), 404
+            
+            results = []
+            for entry in search_results['entries']:
+                if entry:
+                    duration = entry.get('duration', 0)
+                    duration_str = f"{duration // 60}:{duration % 60:02d}" if duration else "N/A"
+                    
+                    results.append({
+                        'id': entry.get('id', ''),
+                        'title': entry.get('title', 'Sin título'),
+                        'url': f"https://www.youtube.com/watch?v={entry.get('id', '')}",
+                        'duration': duration_str,
+                        'views': entry.get('view_count', 0),
+                        'thumbnail': entry.get('thumbnail', '')
+                    })
+            
+            return jsonify({
+                'success': True,
+                'results': results
+            })
+    
+    except Exception as e:
+        return jsonify({'error': f'Error al buscar en YouTube: {str(e)}'}), 500
+
+
+def download_youtube_audio(video_url, output_path, usuario, download_id):
+    """
+    Descarga audio de YouTube y lo convierte a MP3.
+    
+    Args:
+        video_url (str): URL del video de YouTube
+        output_path (str): Ruta donde guardar el archivo
+        usuario (str): Nombre de usuario
+        download_id (str): ID único de la descarga
+    """
+    global download_status
+    global download_status_lock
+    
+    try:
+        with download_status_lock:
+            download_status[download_id] = {
+                'status': 'downloading',
+                'progress': 0,
+                'filename': '',
+                'error': None
+            }
+        
+        def progress_hook(d):
+            if d['status'] == 'downloading':
+                if 'downloaded_bytes' in d and 'total_bytes' in d:
+                    progress = int((d['downloaded_bytes'] / d['total_bytes']) * 100)
+                    with download_status_lock:
+                        download_status[download_id]['progress'] = progress
+            elif d['status'] == 'finished':
+                with download_status_lock:
+                    download_status[download_id]['progress'] = 100
+        
+        ydl_opts = {
+            'format': 'bestaudio/best',
+            'outtmpl': os.path.join(output_path, '%(title)s.%(ext)s'),
+            'postprocessors': [{
+                'key': 'FFmpegExtractAudio',
+                'preferredcodec': 'mp3',
+                'preferredquality': '192',
+            }],
+            'progress_hooks': [progress_hook],
+            'quiet': True,
+            'no_warnings': True
+        }
+        
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            info = ydl.extract_info(video_url, download=True)
+            filename = ydl.prepare_filename(info)
+            # Cambiar extensión a .mp3
+            filename_mp3 = os.path.splitext(filename)[0] + '.mp3'
+            
+            # Obtener solo el nombre del archivo
+            final_filename = os.path.basename(filename_mp3)
+            
+            with download_status_lock:
+                download_status[download_id] = {
+                    'status': 'completed',
+                    'progress': 100,
+                    'filename': final_filename,
+                    'error': None
+                }
+            
+            # Actualizar playlist
+            update_playlist(usuario)
+    
+    except Exception as e:
+        with download_status_lock:
+            download_status[download_id] = {
+                'status': 'error',
+                'progress': 0,
+                'filename': '',
+                'error': str(e)
+            }
+
+
+@app.route('/api/<usuario>/youtube/download', methods=['POST'])
+def youtube_download(usuario):
+    """Descargar audio de YouTube como MP3"""
+    data = request.get_json()
+    if not data or 'url' not in data:
+        return jsonify({'error': 'Se requiere URL de video'}), 400
+    
+    video_url = data['url']
+    user_folder = get_user_folder(usuario)
+    
+    # Verificar cuántas canciones tiene el usuario
+    current_songs = len([f for f in os.listdir(user_folder) if allowed_file(f)])
+    if current_songs >= 50:
+        return jsonify({'error': 'Límite de canciones alcanzado (50 máximo)'}), 400
+    
+    # Generar ID único para esta descarga
+    download_id = f"{usuario}_{int(time.time() * 1000)}"
+    
+    # Iniciar descarga en segundo plano
+    thread = threading.Thread(
+        target=download_youtube_audio,
+        args=(video_url, user_folder, usuario, download_id)
+    )
+    thread.daemon = True
+    thread.start()
+    
+    return jsonify({
+        'success': True,
+        'download_id': download_id,
+        'message': 'Descarga iniciada'
+    })
+
+
+@app.route('/api/<usuario>/download/status/<download_id>', methods=['GET'])
+def get_download_status(usuario, download_id):
+    """Obtener el estado de una descarga"""
+    with download_status_lock:
+        if download_id in download_status:
+            return jsonify(download_status[download_id])
+        else:
+            return jsonify({'error': 'Descarga no encontrada'}), 404
 
 
 if __name__ == '__main__':

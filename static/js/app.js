@@ -1020,3 +1020,567 @@ async function deletePlaylistConfirm(playlistId, playlistName) {
         showStatus(`<i class="fas fa-exclamation-circle"></i> Error de conexión: ${error.message}`, true);
     }
 }
+
+// ========================================
+// FUNCIONES DE IMPORTACIÓN (SPOTIFY & YOUTUBE)
+// ========================================
+
+// Estado de la cola de descargas
+let downloadQueue = [];
+let activeDownloads = 0;
+let spotifySongsData = [];
+
+// Elementos del DOM para importar
+let spotifyImportBtn, spotifyPlaylistUrl, youtubeSearchBtn, youtubeSearchInput;
+let importTabs, importTabContents;
+let importStatus;
+let spotifySongsModal, youtubeResultsModal, downloadQueueElement;
+
+// Inicializar elementos de importación
+function initializeImportElements() {
+    // Tabs
+    importTabs = document.querySelectorAll('.import-tab');
+    importTabContents = document.querySelectorAll('.import-tab-content');
+    
+    // Spotify
+    spotifyImportBtn = document.getElementById('spotifyImportBtn');
+    spotifyPlaylistUrl = document.getElementById('spotifyPlaylistUrl');
+    
+    // YouTube
+    youtubeSearchBtn = document.getElementById('youtubeSearchBtn');
+    youtubeSearchInput = document.getElementById('youtubeSearchInput');
+    
+    // Status
+    importStatus = document.getElementById('importStatus');
+    
+    // Modals
+    spotifySongsModal = document.getElementById('spotifySongsModal');
+    youtubeResultsModal = document.getElementById('youtubeResultsModal');
+    downloadQueueElement = document.getElementById('downloadQueue');
+    
+    // Event listeners
+    if (importTabs) {
+        importTabs.forEach(tab => {
+            tab.addEventListener('click', () => switchImportTab(tab.dataset.tab));
+        });
+    }
+    
+    if (spotifyImportBtn) {
+        spotifyImportBtn.addEventListener('click', importSpotifyPlaylist);
+    }
+    
+    if (youtubeSearchBtn) {
+        youtubeSearchBtn.addEventListener('click', searchYouTube);
+    }
+    
+    if (youtubeSearchInput) {
+        youtubeSearchInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                searchYouTube();
+            }
+        });
+    }
+    
+    // Modal close buttons
+    const closeSpotifySongsBtn = document.getElementById('closeSpotifySongsModal');
+    if (closeSpotifySongsBtn) {
+        closeSpotifySongsBtn.addEventListener('click', () => closeModal(spotifySongsModal));
+    }
+    
+    const closeYoutubeResultsBtn = document.getElementById('closeYoutubeResultsModal');
+    if (closeYoutubeResultsBtn) {
+        closeYoutubeResultsBtn.addEventListener('click', () => closeModal(youtubeResultsModal));
+    }
+    
+    // Select all/deselect all buttons
+    const selectAllBtn = document.getElementById('selectAllSpotifySongs');
+    if (selectAllBtn) {
+        selectAllBtn.addEventListener('click', () => toggleAllSpotifySongs(true));
+    }
+    
+    const deselectAllBtn = document.getElementById('deselectAllSpotifySongs');
+    if (deselectAllBtn) {
+        deselectAllBtn.addEventListener('click', () => toggleAllSpotifySongs(false));
+    }
+    
+    const downloadSelectedBtn = document.getElementById('downloadSelectedBtn');
+    if (downloadSelectedBtn) {
+        downloadSelectedBtn.addEventListener('click', downloadSelectedSpotifySongs);
+    }
+    
+    // Download queue actions
+    const minimizeQueueBtn = document.getElementById('minimizeQueue');
+    if (minimizeQueueBtn) {
+        minimizeQueueBtn.addEventListener('click', toggleQueueMinimize);
+    }
+    
+    const closeQueueBtn = document.getElementById('closeQueue');
+    if (closeQueueBtn) {
+        closeQueueBtn.addEventListener('click', () => {
+            downloadQueueElement.style.display = 'none';
+        });
+    }
+}
+
+// Llamar a initializeImportElements cuando el DOM esté listo
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initializeImportElements);
+} else {
+    initializeImportElements();
+}
+
+// Cambiar tab de importación
+function switchImportTab(tabName) {
+    importTabs.forEach(tab => {
+        if (tab.dataset.tab === tabName) {
+            tab.classList.add('active');
+        } else {
+            tab.classList.remove('active');
+        }
+    });
+    
+    importTabContents.forEach(content => {
+        if (content.id === `${tabName}-content`) {
+            content.classList.add('active');
+        } else {
+            content.classList.remove('active');
+        }
+    });
+}
+
+// Mostrar mensaje de estado de importación
+function showImportStatus(message, type = 'info') {
+    importStatus.textContent = message;
+    importStatus.className = `import-status ${type}`;
+    importStatus.style.display = 'block';
+    
+    if (type === 'success') {
+        setTimeout(() => {
+            importStatus.style.display = 'none';
+        }, 5000);
+    }
+}
+
+// Importar playlist de Spotify
+async function importSpotifyPlaylist() {
+    const url = spotifyPlaylistUrl.value.trim();
+    
+    if (!url) {
+        showImportStatus('Por favor, ingresa una URL de playlist de Spotify', 'error');
+        return;
+    }
+    
+    if (!url.includes('spotify.com/playlist/')) {
+        showImportStatus('URL de playlist inválida', 'error');
+        return;
+    }
+    
+    spotifyImportBtn.disabled = true;
+    showImportStatus('Obteniendo canciones de Spotify...', 'info');
+    
+    try {
+        const response = await fetch(`/api/${USUARIO}/spotify/import`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ url })
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+            spotifySongsData = data.songs;
+            showSpotifySongsModal(data.playlist_name, data.songs);
+            showImportStatus(`${data.songs.length} canciones encontradas`, 'success');
+        } else {
+            showImportStatus(data.error || 'Error al importar playlist', 'error');
+        }
+    } catch (error) {
+        showImportStatus(`Error de conexión: ${error.message}`, 'error');
+    } finally {
+        spotifyImportBtn.disabled = false;
+    }
+}
+
+// Mostrar modal de canciones de Spotify
+function showSpotifySongsModal(playlistName, songs) {
+    const playlistNameEl = document.getElementById('spotifyPlaylistName');
+    const songsList = document.getElementById('spotifySongsList');
+    
+    playlistNameEl.textContent = playlistName;
+    
+    songsList.innerHTML = songs.map((song, index) => `
+        <div class="spotify-song-item" data-index="${index}">
+            <input type="checkbox" class="spotify-song-checkbox" data-index="${index}">
+            <div class="spotify-song-info">
+                <div class="spotify-song-name">${escapeHtml(song.name)}</div>
+                <div class="spotify-song-artist">${escapeHtml(song.artist)}</div>
+                <div class="spotify-song-details">
+                    <span><i class="fas fa-compact-disc"></i> ${escapeHtml(song.album)}</span>
+                    <span><i class="fas fa-clock"></i> ${song.duration}</span>
+                </div>
+            </div>
+        </div>
+    `).join('');
+    
+    // Add event listeners using event delegation
+    songsList.addEventListener('click', (e) => {
+        const item = e.target.closest('.spotify-song-item');
+        if (item && !e.target.classList.contains('spotify-song-checkbox')) {
+            const checkbox = item.querySelector('.spotify-song-checkbox');
+            if (checkbox) {
+                checkbox.checked = !checkbox.checked;
+                updateSpotifySongItemStyle(parseInt(item.dataset.index));
+            }
+        }
+    });
+    
+    // Add change listener using event delegation on parent
+    songsList.addEventListener('change', (e) => {
+        if (e.target.classList.contains('spotify-song-checkbox')) {
+            updateSpotifySongItemStyle(parseInt(e.target.dataset.index));
+        }
+    });
+    
+    openModal(spotifySongsModal);
+}
+
+// Toggle selección de canción de Spotify
+function toggleSpotifySongSelection(index) {
+    const checkbox = document.querySelector(`.spotify-song-checkbox[data-index="${index}"]`);
+    if (checkbox) {
+        checkbox.checked = !checkbox.checked;
+        updateSpotifySongItemStyle(index);
+    }
+}
+
+// Actualizar estilo de item de canción
+function updateSpotifySongItemStyle(index) {
+    const checkbox = document.querySelector(`.spotify-song-checkbox[data-index="${index}"]`);
+    const item = checkbox.closest('.spotify-song-item');
+    
+    if (checkbox.checked) {
+        item.classList.add('selected');
+    } else {
+        item.classList.remove('selected');
+    }
+}
+
+// Seleccionar/Deseleccionar todas las canciones de Spotify
+function toggleAllSpotifySongs(select) {
+    const checkboxes = document.querySelectorAll('.spotify-song-checkbox');
+    checkboxes.forEach((checkbox, index) => {
+        checkbox.checked = select;
+        updateSpotifySongItemStyle(index);
+    });
+}
+
+// Descargar canciones seleccionadas de Spotify
+async function downloadSelectedSpotifySongs() {
+    const checkboxes = document.querySelectorAll('.spotify-song-checkbox:checked');
+    
+    if (checkboxes.length === 0) {
+        showImportStatus('Por favor, selecciona al menos una canción', 'error');
+        return;
+    }
+    
+    closeModal(spotifySongsModal);
+    showImportStatus(`Buscando ${checkboxes.length} canciones en YouTube...`, 'info');
+    
+    for (const checkbox of checkboxes) {
+        const index = parseInt(checkbox.dataset.index);
+        const song = spotifySongsData[index];
+        
+        // Buscar en YouTube y agregar a la cola
+        await searchAndDownloadSong(song);
+    }
+    
+    showImportStatus('Canciones agregadas a la cola de descargas', 'success');
+}
+
+// Buscar y descargar canción automáticamente
+async function searchAndDownloadSong(song) {
+    try {
+        const response = await fetch(`/api/${USUARIO}/youtube/search`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ query: song.search_query })
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok && data.results.length > 0) {
+            // Tomar el primer resultado
+            const video = data.results[0];
+            addToDownloadQueue(song.name, video.url);
+        }
+    } catch (error) {
+        console.error('Error searching song:', error);
+    }
+}
+
+// Buscar en YouTube
+async function searchYouTube() {
+    const query = youtubeSearchInput.value.trim();
+    
+    if (!query) {
+        showImportStatus('Por favor, ingresa un término de búsqueda', 'error');
+        return;
+    }
+    
+    youtubeSearchBtn.disabled = true;
+    showImportStatus('Buscando en YouTube...', 'info');
+    
+    try {
+        const response = await fetch(`/api/${USUARIO}/youtube/search`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ query })
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+            showYoutubeResultsModal(data.results);
+            showImportStatus(`${data.results.length} resultados encontrados`, 'success');
+        } else {
+            showImportStatus(data.error || 'Error al buscar en YouTube', 'error');
+        }
+    } catch (error) {
+        showImportStatus(`Error de conexión: ${error.message}`, 'error');
+    } finally {
+        youtubeSearchBtn.disabled = false;
+    }
+}
+
+// Mostrar modal de resultados de YouTube
+function showYoutubeResultsModal(results) {
+    const resultsList = document.getElementById('youtubeResultsList');
+    
+    resultsList.innerHTML = results.map((video, index) => `
+        <div class="youtube-result-item" data-video-index="${index}">
+            <img src="${video.thumbnail || 'https://via.placeholder.com/120x90?text=No+Image'}" 
+                 alt="${escapeHtml(video.title)}" 
+                 class="youtube-thumbnail">
+            <div class="youtube-info">
+                <div class="youtube-title">${escapeHtml(video.title)}</div>
+                <div class="youtube-meta">
+                    <span><i class="fas fa-clock"></i> ${video.duration}</span>
+                    <span><i class="fas fa-eye"></i> ${formatViews(video.views)} vistas</span>
+                </div>
+                <button class="youtube-download-btn" data-url="${escapeHtml(video.url)}" data-title="${escapeHtml(video.title)}">
+                    <i class="fas fa-download"></i> Descargar
+                </button>
+            </div>
+        </div>
+    `).join('');
+    
+    // Add event listeners using event delegation
+    resultsList.addEventListener('click', (e) => {
+        const btn = e.target.closest('.youtube-download-btn');
+        if (btn) {
+            const url = btn.dataset.url;
+            const title = btn.dataset.title;
+            downloadFromYouTube(url, title);
+        }
+    });
+    
+    openModal(youtubeResultsModal);
+}
+
+// Descargar desde YouTube
+function downloadFromYouTube(url, title) {
+    closeModal(youtubeResultsModal);
+    addToDownloadQueue(title, url);
+}
+
+// Agregar a la cola de descargas
+async function addToDownloadQueue(title, url) {
+    try {
+        const response = await fetch(`/api/${USUARIO}/youtube/download`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ url })
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+            const download = {
+                id: data.download_id,
+                title: title,
+                status: 'downloading',
+                progress: 0,
+                error: null
+            };
+            
+            downloadQueue.push(download);
+            renderDownloadQueue();
+            monitorDownload(data.download_id);
+        } else {
+            showImportStatus(data.error || 'Error al iniciar descarga', 'error');
+        }
+    } catch (error) {
+        showImportStatus(`Error de conexión: ${error.message}`, 'error');
+    }
+}
+
+// Monitorear progreso de descarga
+async function monitorDownload(downloadId) {
+    let retryCount = 0;
+    const maxRetries = 60; // Max 2 minutes (60 * 2 seconds)
+    
+    const checkStatus = async () => {
+        try {
+            const response = await fetch(`/api/${USUARIO}/download/status/${downloadId}`);
+            
+            if (response.ok) {
+                const status = await response.json();
+                updateDownloadStatus(downloadId, status);
+                retryCount = 0; // Reset on successful request
+                
+                if (status.status === 'downloading') {
+                    // Poll every 2 seconds to reduce server load
+                    if (retryCount < maxRetries) {
+                        retryCount++;
+                        setTimeout(checkStatus, 2000);
+                    } else {
+                        // Max retries reached, mark as error
+                        updateDownloadStatus(downloadId, {
+                            status: 'error',
+                            progress: 0,
+                            error: 'Tiempo de descarga excedido'
+                        });
+                    }
+                } else if (status.status === 'completed') {
+                    // Recargar lista de canciones
+                    setTimeout(loadSongs, 1000);
+                }
+            } else {
+                retryCount++;
+                if (retryCount < maxRetries) {
+                    setTimeout(checkStatus, 2000);
+                }
+            }
+        } catch (error) {
+            console.error('Error checking download status:', error);
+            retryCount++;
+            if (retryCount < maxRetries) {
+                // Retry with exponential backoff
+                setTimeout(checkStatus, Math.min(2000 * Math.pow(1.5, retryCount), 10000));
+            } else {
+                updateDownloadStatus(downloadId, {
+                    status: 'error',
+                    progress: 0,
+                    error: 'Error de conexión'
+                });
+            }
+        }
+    };
+    
+    checkStatus();
+}
+
+// Actualizar estado de descarga
+function updateDownloadStatus(downloadId, status) {
+    const download = downloadQueue.find(d => d.id === downloadId);
+    if (download) {
+        download.status = status.status;
+        download.progress = status.progress || 0;
+        download.error = status.error;
+        renderDownloadQueue();
+    }
+}
+
+// Renderizar cola de descargas
+function renderDownloadQueue() {
+    if (downloadQueue.length === 0) {
+        downloadQueueElement.style.display = 'none';
+        return;
+    }
+    
+    downloadQueueElement.style.display = 'block';
+    
+    const queueCount = document.getElementById('queueCount');
+    const queueBody = document.getElementById('downloadQueueBody');
+    
+    const completed = downloadQueue.filter(d => d.status === 'completed').length;
+    queueCount.textContent = `(${completed}/${downloadQueue.length})`;
+    
+    queueBody.innerHTML = downloadQueue.map(download => {
+        let icon = '<i class="fas fa-spinner fa-spin"></i>';
+        let statusClass = 'downloading';
+        let statusText = `${download.progress}%`;
+        
+        if (download.status === 'completed') {
+            icon = '<i class="fas fa-check-circle"></i>';
+            statusClass = 'completed';
+            statusText = '¡Listo!';
+        } else if (download.status === 'error') {
+            icon = '<i class="fas fa-exclamation-circle"></i>';
+            statusClass = 'error';
+            statusText = 'Error';
+        }
+        
+        return `
+            <div class="download-item ${statusClass}">
+                <div class="download-item-header">
+                    <span class="download-item-icon ${statusClass}">${icon}</span>
+                    <span class="download-item-name">${escapeHtml(download.title)}</span>
+                    <span class="download-item-status">${statusText}</span>
+                </div>
+                <div class="download-progress-bar">
+                    <div class="download-progress-fill" style="width: ${download.progress}%"></div>
+                </div>
+                ${download.error ? `<div class="download-error-message">${escapeHtml(download.error)}</div>` : ''}
+            </div>
+        `;
+    }).join('');
+}
+
+// Toggle minimizar cola de descargas
+function toggleQueueMinimize() {
+    downloadQueueElement.classList.toggle('minimized');
+    const icon = document.querySelector('#minimizeQueue i');
+    
+    if (downloadQueueElement.classList.contains('minimized')) {
+        icon.className = 'fas fa-plus';
+    } else {
+        icon.className = 'fas fa-minus';
+    }
+}
+
+// Funciones auxiliares
+function openModal(modal) {
+    if (modal) {
+        modal.style.display = 'flex';
+    }
+}
+
+function closeModal(modal) {
+    if (modal) {
+        modal.style.display = 'none';
+    }
+}
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+function formatViews(views) {
+    if (views >= 1000000) {
+        return (views / 1000000).toFixed(1) + 'M';
+    } else if (views >= 1000) {
+        return (views / 1000).toFixed(1) + 'K';
+    }
+    return views.toString();
+}
