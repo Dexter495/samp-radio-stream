@@ -137,7 +137,7 @@ output.icecast(
   %ffmpeg(format="mp3", %audio(codec="libmp3lame", b="128k")),
   host="localhost",
   port=8000,
-  password="hackme",
+  password="{config.ICECAST_PASSWORD}",
   mount="{secure_filename(usuario)}",
   radio
 )
@@ -160,24 +160,32 @@ def start_liquidsoap(usuario):
     script_path = generate_liquidsoap_config(usuario)
     
     # Configurar el proceso según el sistema operativo
-    if os.name == 'nt':  # Windows
-        # Iniciar Liquidsoap con CREATE_NO_WINDOW para no mostrar consola
-        process = subprocess.Popen(
-            [LIQUIDSOAP_PATH, script_path],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            creationflags=subprocess.CREATE_NO_WINDOW
-        )
-    else:  # Unix-like
-        # Iniciar Liquidsoap normalmente
-        process = subprocess.Popen(
-            [LIQUIDSOAP_PATH, script_path],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE
-        )
-    
-    liquidsoap_processes[usuario] = process
-    return True
+    try:
+        if os.name == 'nt':  # Windows
+            # Iniciar Liquidsoap con CREATE_NO_WINDOW para no mostrar consola
+            process = subprocess.Popen(
+                [LIQUIDSOAP_PATH, script_path],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                creationflags=subprocess.CREATE_NO_WINDOW
+            )
+        else:  # Unix-like
+            # Iniciar Liquidsoap normalmente
+            process = subprocess.Popen(
+                [LIQUIDSOAP_PATH, script_path],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE
+            )
+        
+        liquidsoap_processes[usuario] = process
+        return True
+    except FileNotFoundError:
+        # Liquidsoap no encontrado en el sistema
+        return False
+    except Exception as e:
+        # Otro error al iniciar el proceso
+        print(f"Error starting Liquidsoap for {usuario}: {e}")
+        return False
 
 
 def stop_liquidsoap(usuario):
@@ -189,9 +197,13 @@ def stop_liquidsoap(usuario):
         try:
             process.terminate()
             process.wait(timeout=5)
-        except:
+        except subprocess.TimeoutExpired:
             process.kill()
-        del liquidsoap_processes[usuario]
+        except ProcessLookupError:
+            # Process already terminated
+            pass
+        finally:
+            del liquidsoap_processes[usuario]
     return True
 
 
@@ -406,7 +418,9 @@ def play_song(usuario):
         return jsonify({'error': 'Canción no encontrada'}), 404
     
     # Iniciar Liquidsoap
-    start_liquidsoap(usuario)
+    liquidsoap_started = start_liquidsoap(usuario)
+    if not liquidsoap_started:
+        return jsonify({'error': 'Error al iniciar el streaming. Verifica que Liquidsoap esté instalado.'}), 500
     
     # Actualizar estado
     state = {
