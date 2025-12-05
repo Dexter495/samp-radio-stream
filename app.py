@@ -744,7 +744,7 @@ def youtube_search(usuario):
             results = []
             for entry in search_results['entries']:
                 if entry:
-                    duration = entry.get('duration', 0)
+                    duration = int(entry.get('duration', 0) or 0)
                     duration_str = f"{duration // 60}:{duration % 60:02d}" if duration else "N/A"
                     
                     results.append({
