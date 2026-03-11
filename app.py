@@ -32,20 +32,8 @@ database.init_db()
 # Thread-safe lock para proteger download_status
 download_status_lock = threading.Lock()
 
-# Diccionario para almacenar procesos de Liquidsoap por usuario
-liquidsoap_processes = {}
-
-# Configuración de rutas de Liquidsoap
-# Nota: Ajustar estas rutas según tu sistema operativo
-if os.name == 'nt':  # Windows
-    LIQUIDSOAP_PATH = "E:/liquidsoap-2.4.0-win64/liquidsoap.exe"
-    LIQUIDSOAP_SCRIPTS_PATH = "E:/liquidsoap-2.4.0-win64"
-else:  # Unix-like (Linux, macOS)
-    LIQUIDSOAP_PATH = "liquidsoap"  # Asume que está en PATH
-    LIQUIDSOAP_SCRIPTS_PATH = os.path.join(config.BASE_DIR, "liquidsoap")
-
-# Crear directorio de scripts de Liquidsoap si no existe
-os.makedirs(LIQUIDSOAP_SCRIPTS_PATH, exist_ok=True)
+# Diccionario para almacenar procesos de streaming (FFmpeg) por usuario
+stream_processes = {}
 
 
 def admin_required(f):
@@ -122,88 +110,83 @@ def update_playlist(usuario):
     return canciones
 
 
-def generate_liquidsoap_config(usuario):
-    """Genera el archivo de configuración de Liquidsoap para el usuario"""
-    user_folder = get_user_folder(usuario).replace("\\", "/")
-    script_path = os.path.join(LIQUIDSOAP_SCRIPTS_PATH, f"radio_{secure_filename(usuario)}.liq")
-    
-    config_content = f'''#!/usr/bin/liquidsoap
-
-music = playlist("{user_folder}")
-
-radio = fallback(track_sensitive=false, [music, blank()])
-
-output.icecast(
-  %ffmpeg(format="mp3", %audio(codec="libmp3lame", b="128k")),
-  host="localhost",
-  port=8000,
-  password="{config.ICECAST_PASSWORD}",
-  mount="{secure_filename(usuario)}",
-  radio
-)
-'''
-    
-    with open(script_path, 'w') as f:
-        f.write(config_content)
-    
-    return script_path
-
-
-def start_liquidsoap(usuario):
-    """Inicia el proceso de Liquidsoap para el usuario"""
-    global liquidsoap_processes
+def start_stream(usuario, song_filepath):
+    """Inicia streaming de una canción específica usando FFmpeg hacia Icecast"""
+    global stream_processes
     
     # Si ya hay un proceso corriendo, detenerlo primero
-    stop_liquidsoap(usuario)
+    stop_stream(usuario)
     
-    # Generar archivo de configuración
-    script_path = generate_liquidsoap_config(usuario)
+    # Construir URL de Icecast
+    icecast_url = f"icecast://source:{config.ICECAST_PASSWORD}@{config.ICECAST_HOST}:{config.ICECAST_PORT}/{secure_filename(usuario)}"
     
-    # Configurar el proceso según el sistema operativo
+    # Determinar la ruta de FFmpeg
+    ffmpeg_cmd = getattr(config, 'FFMPEG_PATH', 'ffmpeg')
+    
+    # Comando FFmpeg para streaming
+    cmd = [
+        ffmpeg_cmd,
+        '-re',                    # Leer a velocidad real (real-time)
+        '-i', song_filepath,      # Archivo de entrada
+        '-vn',                    # Sin video
+        '-c:a', 'libmp3lame',     # Codec MP3
+        '-b:a', '128k',           # Bitrate 128kbps
+        '-f', 'mp3',              # Formato de salida
+        '-content_type', 'audio/mpeg',
+        icecast_url
+    ]
+    
     try:
         if os.name == 'nt':  # Windows
-            # Iniciar Liquidsoap con CREATE_NO_WINDOW para no mostrar consola
             process = subprocess.Popen(
-                [LIQUIDSOAP_PATH, script_path],
+                cmd,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 creationflags=subprocess.CREATE_NO_WINDOW
             )
         else:  # Unix-like
-            # Iniciar Liquidsoap normalmente
             process = subprocess.Popen(
-                [LIQUIDSOAP_PATH, script_path],
+                cmd,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE
             )
         
-        liquidsoap_processes[usuario] = process
+        stream_processes[usuario] = process
+        
+        # Esperar un momento y verificar que el proceso no haya muerto inmediatamente
+        time.sleep(1)
+        if process.poll() is not None:
+            stderr_output = process.stderr.read().decode('utf-8', errors='replace')
+            print(f"Error de FFmpeg para {usuario}: {stderr_output}")
+            if usuario in stream_processes:
+                del stream_processes[usuario]
+            return False
+        
         return True
     except FileNotFoundError:
-        # Liquidsoap no encontrado en el sistema
+        print(f"FFmpeg no encontrado en: {ffmpeg_cmd}")
         return False
     except Exception as e:
-        # Otro error al iniciar el proceso
-        print(f"Error starting Liquidsoap for {usuario}: {e}")
+        print(f"Error al iniciar stream para {usuario}: {e}")
         return False
 
 
-def stop_liquidsoap(usuario):
-    """Detiene el proceso de Liquidsoap del usuario"""
-    global liquidsoap_processes
+def stop_stream(usuario):
+    """Detiene el proceso de streaming del usuario"""
+    global stream_processes
     
-    if usuario in liquidsoap_processes:
-        process = liquidsoap_processes[usuario]
+    if usuario in stream_processes:
+        process = stream_processes[usuario]
         try:
             process.terminate()
             process.wait(timeout=5)
         except subprocess.TimeoutExpired:
             process.kill()
         except ProcessLookupError:
-            # Process already terminated
             pass
         finally:
-            del liquidsoap_processes[usuario]
+            if usuario in stream_processes:
+                del stream_processes[usuario]
     return True
 
 
@@ -417,10 +400,10 @@ def play_song(usuario):
     if not os.path.exists(filepath):
         return jsonify({'error': 'Canción no encontrada'}), 404
     
-    # Iniciar Liquidsoap
-    liquidsoap_started = start_liquidsoap(usuario)
-    if not liquidsoap_started:
-        return jsonify({'error': 'Error al iniciar el streaming. Verifica que Liquidsoap esté instalado.'}), 500
+    # Iniciar streaming con FFmpeg
+    stream_started = start_stream(usuario, filepath)
+    if not stream_started:
+        return jsonify({'error': 'Error al iniciar el streaming. Verifica que FFmpeg esté instalado.'}), 500
     
     # Actualizar estado
     state = {
@@ -448,6 +431,9 @@ def pause_song(usuario):
     if not state.get('playing'):
         return jsonify({'error': 'No hay reproducción activa'}), 400
     
+    # Detener el stream de FFmpeg para pausar
+    stop_stream(usuario)
+    
     state['paused'] = True
     save_user_state(usuario, state)
     
@@ -462,6 +448,14 @@ def resume_song(usuario):
     if not state.get('playing'):
         return jsonify({'error': 'No hay reproducción activa'}), 400
     
+    # Reiniciar el stream de FFmpeg para resumir
+    current_song = state.get('current_song')
+    if current_song:
+        user_folder = get_user_folder(usuario)
+        filepath = os.path.join(user_folder, secure_filename(current_song))
+        if os.path.exists(filepath):
+            start_stream(usuario, filepath)
+    
     state['paused'] = False
     save_user_state(usuario, state)
     
@@ -471,8 +465,8 @@ def resume_song(usuario):
 @app.route('/api/<usuario>/stop', methods=['POST'])
 def stop_song(usuario):
     """Detener reproducción"""
-    # Detener Liquidsoap
-    stop_liquidsoap(usuario)
+    # Detener el stream de FFmpeg
+    stop_stream(usuario)
     
     state = {
         'playing': False,
@@ -521,6 +515,10 @@ def next_song(usuario):
     state['paused'] = False
     save_user_state(usuario, state)
     
+    # Iniciar streaming de la nueva canción con FFmpeg
+    next_filepath = os.path.join(user_folder, next_song_name)
+    start_stream(usuario, next_filepath)
+    
     # Generate URL del stream
     stream_url = f"http://{config.ICECAST_HOST}:{config.ICECAST_PORT}/{secure_filename(usuario)}"
     
@@ -568,6 +566,10 @@ def previous_song(usuario):
     state['playing'] = True
     state['paused'] = False
     save_user_state(usuario, state)
+    
+    # Iniciar streaming de la nueva canción con FFmpeg
+    prev_filepath = os.path.join(user_folder, prev_song_name)
+    start_stream(usuario, prev_filepath)
     
     # Generate URL del stream
     stream_url = f"http://{config.ICECAST_HOST}:{config.ICECAST_PORT}/{secure_filename(usuario)}"
@@ -1079,7 +1081,8 @@ def download_youtube_audio(video_url, output_path, usuario, download_id):
             }],
             'progress_hooks': [progress_hook],
             'quiet': True,
-            'no_warnings': True
+            'no_warnings': True,
+            'ffmpeg_location': os.path.dirname(config.FFMPEG_PATH) if os.path.isabs(config.FFMPEG_PATH) else None,
         }
         
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
