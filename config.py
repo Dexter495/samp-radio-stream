@@ -18,9 +18,10 @@ ICECAST_PORT = 8000
 ICECAST_PASSWORD = 'hackme'
 ICECAST_ADMIN_PASSWORD = 'hackme'
 
-# Configuración de Liquidsoap
-LIQUIDSOAP_HOST = 'localhost'
-LIQUIDSOAP_TELNET_PORT = 1234
+# Configuración de FFmpeg
+# En Windows, especificar la ruta completa si no está en PATH
+# En Linux/macOS, generalmente 'ffmpeg' está en PATH
+FFMPEG_PATH = os.environ.get('FFMPEG_PATH', 'ffmpeg')
 
 # Configuración de Spotify API
 # IMPORTANTE: En producción, usar variables de entorno:
